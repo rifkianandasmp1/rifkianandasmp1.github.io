@@ -372,6 +372,44 @@
     max-width: 480px;
   }
 
+  /* ============ TRAINING ============ */
+  .training-block {
+    margin-top: 80px;
+    padding-top: 48px;
+    border-top: 1px solid var(--line);
+  }
+  .training-list {
+    list-style: none;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+  @media (max-width: 720px) {
+    .training-list { grid-template-columns: 1fr; }
+  }
+  .training-list li {
+    font-family: var(--font-display);
+    font-weight: 300;
+    font-size: 19px;
+    letter-spacing: -0.01em;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--line);
+    color: var(--ink);
+    display: flex;
+    align-items: baseline;
+    gap: 18px;
+    transition: all 0.3s;
+  }
+  .training-list li:hover { color: var(--accent); padding-left: 10px; }
+  .training-year {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    flex-shrink: 0;
+    min-width: 38px;
+  }
+
   /* ============ EXPERIENCE TIMELINE ============ */
   .exp-item {
     display: grid;
@@ -719,7 +757,7 @@
 <!-- ============ NAV ============ -->
 <nav>
   <div class="nav-inner">
-    <div class="brand">M. Rifki <em>Ananda</em></div>
+    <div class="brand">Rifki <em>Ananda</em></div>
     <ul class="nav-links">
       <li><a href="#about" data-num="01">About</a></li>
       <li><a href="#work" data-num="02">Work</a></li>
@@ -737,8 +775,8 @@
       <div class="hero-meta">Portfolio &middot; Jakarta, Indonesia &middot; 2026</div>
       <h1>M. Rifki<br/>Ananda<em>.</em></h1>
       <p class="hero-tag">
-        <strong>System Analyst & Data Analyst</strong> with four years of experience building scalable enterprise systems —
-        from BUMN oil & gas to higher-education platforms. I translate ambiguous business needs into shipped software.
+        <strong>System & Data Analyst</strong> with four years delivering scalable enterprise systems —
+        from BUMN oil & gas to higher-education platforms. I bridge technical teams and stakeholders to ship software that works.
       </p>
 
       <div class="hero-bottom">
@@ -777,10 +815,10 @@
       </p>
       <div class="about-body">
         <p>
-          Over four years I've shipped more than ten projects spanning analyst, outsource, and enhancement work — across both cloud and on-premise deployments.
+          A detail-oriented analyst with four years delivering over ten scalable application development and enhancement projects — across both on-premise and cloud-based deployments, and across Waterfall and Hybrid SDLC methodologies.
         </p>
         <p>
-          My toolkit covers Oracle, Microsoft SQL Server, Azure, and MongoDB. My day-to-day sits at the intersection of rigid corporate compliance and agile technical execution — translating client needs, resolving cases, and leading toward delivery.
+          My technical toolkit covers Oracle, Microsoft SQL Server, Azure Database, and MongoDB. My strength lies in understanding client needs, driving technical resolutions, and bridging communication between technical teams and stakeholders to reach optimal results.
         </p>
       </div>
     </div>
@@ -826,9 +864,9 @@
         </div>
         <div>
           <h3 class="exp-role">System Analyst</h3>
-          <div class="exp-company">Pertamina EP Cepu · South Jakarta</div>
+          <div class="exp-company">Mitra Integrasi Informatika · Placed at Pertamina EP Cepu</div>
           <p class="exp-desc">
-            Operating within a Hybrid SDLC framework (Waterfall + Scrum) at one of Indonesia's most strategic upstream oil & gas operators. The Waterfall side carries SKK Migas regulatory documentation; Scrum drives technical execution.
+            Operated within a Hybrid SDLC framework (Waterfall & Scrum) in a large-scale State-Owned Enterprise (BUMN) environment — balancing agile technical execution with strict corporate compliance and SKK Migas documentation requirements.
           </p>
           <ul class="exp-list">
             <li>Learning Management System</li>
@@ -845,9 +883,9 @@
         </div>
         <div>
           <h3 class="exp-role">Senior System Analyst</h3>
-          <div class="exp-company">Bina Nusantara IT Division · Palmerah</div>
+          <div class="exp-company">Bina Nusantara IT Division · West Jakarta</div>
           <p class="exp-desc">
-            Promoted to lead enhancements and new builds across the academic platform suite, owning analyst-level decisions on five concurrent initiatives.
+            Led the enhancement of the Event Management Application and spearheaded the development of new Academic Advisory and Student Evaluation applications, improving operational efficiency across the platform suite.
           </p>
           <ul class="exp-list">
             <li>Event Management (Enhancement)</li>
@@ -868,13 +906,12 @@
           <h3 class="exp-role">System Analyst</h3>
           <div class="exp-company">Bina Nusantara IT Division · West Jakarta</div>
           <p class="exp-desc">
-            Three years across the BINUS academic ecosystem — from ticketing and on-call repairs to greenfield analyst work. Worked alongside a master's program while shipping production systems.
+            Resolved technical cases through ticketing systems to ensure smooth application usage for students and staff, while supporting the ongoing enhancement and maintenance of core university applications. Worked alongside a master's program throughout.
           </p>
           <ul class="exp-list">
-            <li>Student Dashboard Helpdesk</li>
-            <li>Academic Advisory</li>
-            <li>Student Evaluation</li>
-            <li>Graduation Photo Editor</li>
+            <li>Ticketing & Case Resolution</li>
+            <li>Academic Advisory (2023)</li>
+            <li>Student Evaluation (2024)</li>
             <li>Event Management</li>
           </ul>
         </div>
@@ -955,6 +992,18 @@
         </ul>
       </div>
     </div>
+
+    <!-- Training & Webinars -->
+    <div class="training-block reveal">
+      <div class="method-label">Training, Webinars & Certifications</div>
+      <ul class="training-list">
+        <li><span class="training-year">2026</span> ISEC</li>
+        <li><span class="training-year">2024</span> IT Professional Compliance</li>
+        <li><span class="training-year">2023</span> A Dive into Comprehensive Software Testing</li>
+        <li><span class="training-year">2023</span> Advanced Technology in Education Industry</li>
+        <li><span class="training-year">2023</span> Alibaba Cloud Certified Associate</li>
+      </ul>
+    </div>
   </div>
 </section>
 
@@ -971,7 +1020,7 @@
         <div class="proj-year">2026</div>
         <div class="proj-arrow">↗</div>
         <h3 class="proj-title">Learning Management System</h3>
-        <p class="proj-desc">Built for Pertamina EP Cepu — enterprise training platform under hybrid SDLC.</p>
+        <p class="proj-desc">Built at Pertamina EP Cepu via MII — enterprise training platform under hybrid SDLC.</p>
       </div>
       <div class="proj-card">
         <div class="proj-year">2025</div>
