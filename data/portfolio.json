@@ -13,10 +13,26 @@
     "tagline": "I turn complex business processes into **reliable enterprise systems** — four years across BUMN toll-road infrastructure, upstream oil & gas, and higher-education platforms.",
     "photo": "images/profile.png",
     "stats": [
-      { "label": "Experience", "value": "4", "suffix": "+ yrs" },
-      { "label": "Projects shipped", "value": "10", "suffix": "+" },
-      { "label": "Master's GPA", "value": "4.00", "suffix": "/ 4" },
-      { "label": "Currently at", "value": "Jasa Marga", "suffix": "" }
+      {
+        "label": "Experience",
+        "value": "4",
+        "suffix": "+ yrs"
+      },
+      {
+        "label": "Projects shipped",
+        "value": "10",
+        "suffix": "+"
+      },
+      {
+        "label": "Master's GPA",
+        "value": "3.99",
+        "suffix": "/ 4"
+      },
+      {
+        "label": "Currently at",
+        "value": "Jasa Marga",
+        "suffix": ""
+      }
     ]
   },
   "about": {
@@ -51,7 +67,11 @@
       "company": "PT Jasa Marga (Persero) Tbk",
       "location": "Jakarta",
       "desc": "System Analyst at Indonesia's leading toll-road operator — translating business requirements into system specifications and bridging operational stakeholders with development teams.",
-      "tags": ["Requirements Analysis", "System Design", "Stakeholder Management"]
+      "tags": [
+        "Requirements Analysis",
+        "System Design",
+        "Stakeholder Management"
+      ]
     },
     {
       "start": "Jul 2025",
@@ -60,7 +80,11 @@
       "company": "Mitra Integrasi Informatika · placed at Pertamina EP Cepu",
       "location": "Jakarta",
       "desc": "Operated within a Hybrid SDLC framework (Waterfall & Scrum) in a large-scale State-Owned Enterprise (BUMN) environment — balancing agile technical execution with strict corporate compliance and SKK Migas documentation requirements.",
-      "tags": ["Learning Management System", "KPI System", "Travel Management"]
+      "tags": [
+        "Learning Management System",
+        "KPI System",
+        "Travel Management"
+      ]
     },
     {
       "start": "Feb 2025",
@@ -69,7 +93,13 @@
       "company": "Bina Nusantara IT Division",
       "location": "West Jakarta",
       "desc": "Led the enhancement of the Event Management Application and spearheaded the development of new Academic Advisory and Student Evaluation applications, improving operational efficiency across the platform suite.",
-      "tags": ["Event Management (Enhancement)", "Academic Advisory Apps", "Student Evaluation Apps", "Student Dashboard Helpdesk", "Graduation Photo Editor"]
+      "tags": [
+        "Event Management (Enhancement)",
+        "Academic Advisory Apps",
+        "Student Evaluation Apps",
+        "Student Dashboard Helpdesk",
+        "Graduation Photo Editor"
+      ]
     },
     {
       "start": "Mar 2022",
@@ -78,7 +108,12 @@
       "company": "Bina Nusantara IT Division",
       "location": "West Jakarta",
       "desc": "Resolved technical cases through ticketing systems to ensure smooth application usage for students and staff, while supporting the ongoing enhancement and maintenance of core university applications. Worked alongside a master's program throughout.",
-      "tags": ["Ticketing & Case Resolution", "Academic Advisory (2023)", "Student Evaluation (2024)", "Event Management"]
+      "tags": [
+        "Ticketing & Case Resolution",
+        "Academic Advisory (2023)",
+        "Student Evaluation (2024)",
+        "Event Management"
+      ]
     }
   ],
   "projects": [
@@ -158,32 +193,82 @@
   "skills": [
     {
       "category": "Hard skills",
-      "items": ["UI / UX Design", "Data Visualization", "Azure Resources", "SQL & NoSQL", "Google Workspace"]
+      "items": [
+        "UI / UX Design",
+        "Data Visualization",
+        "Azure Resources",
+        "SQL & NoSQL",
+        "Google Workspace"
+      ]
     },
     {
       "category": "Soft skills",
-      "items": ["System Analysis", "Data Analysis", "Strategic Thinking", "Leadership", "Public Speaking"]
+      "items": [
+        "System Analysis",
+        "Data Analysis",
+        "Strategic Thinking",
+        "Leadership",
+        "Public Speaking"
+      ]
     },
     {
       "category": "Databases & cloud",
-      "items": ["Oracle", "Microsoft SQL Server", "Azure Database", "MongoDB", "Alibaba Cloud"]
+      "items": [
+        "Oracle",
+        "Microsoft SQL Server",
+        "Azure Database",
+        "MongoDB",
+        "Alibaba Cloud"
+      ]
     }
   ],
   "training": [
-    { "year": "2026", "title": "ISEC" },
-    { "year": "2024", "title": "IT Professional Compliance" },
-    { "year": "2023", "title": "A Dive into Comprehensive Software Testing" },
-    { "year": "2023", "title": "Advanced Technology in Education Industry" },
-    { "year": "2023", "title": "Alibaba Cloud Certified Associate", "certificate": true }
+    {
+      "year": "2026",
+      "title": "ISEC"
+    },
+    {
+      "year": "2024",
+      "title": "IT Professional Compliance"
+    },
+    {
+      "year": "2023",
+      "title": "A Dive into Comprehensive Software Testing"
+    },
+    {
+      "year": "2023",
+      "title": "Advanced Technology in Education Industry"
+    },
+    {
+      "year": "2023",
+      "title": "Alibaba Cloud Certified Associate",
+      "certificate": true
+    }
   ],
   "contact": {
     "heading": "Let's *talk*.",
     "subheading": "Open to conversations about enterprise systems, data, and digital transformation.",
     "links": [
-      { "label": "Email", "value": "rifkianandasmp1@gmail.com", "href": "mailto:rifkianandasmp1@gmail.com" },
-      { "label": "LinkedIn", "value": "in/m-rifki-ananda-yes", "href": "https://www.linkedin.com/in/m-rifki-ananda-yes/" },
-      { "label": "Phone", "value": "+62 821-6934-5442", "href": "tel:+6282169345442" },
-      { "label": "Location", "value": "Palmerah, Jakarta", "href": "" }
+      {
+        "label": "Email",
+        "value": "rifkianandasmp1@gmail.com",
+        "href": "mailto:rifkianandasmp1@gmail.com"
+      },
+      {
+        "label": "LinkedIn",
+        "value": "in/m-rifki-ananda-yes",
+        "href": "https://www.linkedin.com/in/m-rifki-ananda-yes/"
+      },
+      {
+        "label": "Phone",
+        "value": "+62 821-6934-5442",
+        "href": "tel:+6282169345442"
+      },
+      {
+        "label": "Location",
+        "value": "Palmerah, Jakarta",
+        "href": ""
+      }
     ]
   }
 }
