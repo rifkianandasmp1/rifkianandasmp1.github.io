@@ -1,0 +1,189 @@
+{
+  "meta": {
+    "title": "M. Rifki Ananda — System & Data Analyst",
+    "description": "Portfolio of M. Rifki Ananda — System & Data Analyst with 4+ years of experience in enterprise systems, SDLC, and data-driven solutions across BUMN and higher-education platforms.",
+    "updated": "2026-10-08"
+  },
+  "profile": {
+    "first_name": "M. Rifki",
+    "last_name": "Ananda",
+    "role": "System & Data Analyst",
+    "location": "Jakarta, Indonesia",
+    "status": "Currently System Analyst at Jasa Marga",
+    "tagline": "I turn complex business processes into **reliable enterprise systems** — four years across BUMN toll-road infrastructure, upstream oil & gas, and higher-education platforms.",
+    "photo": "images/profile.png",
+    "stats": [
+      { "label": "Experience", "value": "4", "suffix": "+ yrs" },
+      { "label": "Projects shipped", "value": "10", "suffix": "+" },
+      { "label": "Master's GPA", "value": "4.00", "suffix": "/ 4" },
+      { "label": "Currently at", "value": "Jasa Marga", "suffix": "" }
+    ]
+  },
+  "about": {
+    "lead": "I build systems that work *at scale* — designed for enterprise, refined for people.",
+    "paragraphs": [
+      "A detail-oriented analyst with four years delivering over ten scalable application development and enhancement projects — across both on-premise and cloud-based deployments, and across Waterfall and Hybrid SDLC methodologies.",
+      "My technical toolkit covers Oracle, Microsoft SQL Server, Azure Database, and MongoDB. My strength lies in understanding client needs, driving technical resolutions, and bridging communication between technical teams and stakeholders to reach optimal results."
+    ]
+  },
+  "methodology": {
+    "label": "SDLC methodology · practiced since 2022",
+    "items": [
+      {
+        "name": "Waterfall",
+        "duration": "3+ yrs",
+        "percent": 80,
+        "desc": "Heavy regulatory documentation, structured phases, BUMN compliance — production-grade enterprise rigor."
+      },
+      {
+        "name": "Scrum / Agile",
+        "duration": "9 mos",
+        "percent": 20,
+        "desc": "Sprint-driven delivery, daily stand-ups, iterative refinement — applied within a hybrid SDLC at Pertamina EP Cepu."
+      }
+    ]
+  },
+  "experience": [
+    {
+      "start": "Apr 2026",
+      "end": "Present",
+      "role": "System Analyst",
+      "company": "PT Jasa Marga (Persero) Tbk",
+      "location": "Jakarta",
+      "desc": "System Analyst at Indonesia's leading toll-road operator — translating business requirements into system specifications and bridging operational stakeholders with development teams.",
+      "tags": ["Requirements Analysis", "System Design", "Stakeholder Management"]
+    },
+    {
+      "start": "Jul 2025",
+      "end": "Mar 2026",
+      "role": "System Analyst",
+      "company": "Mitra Integrasi Informatika · placed at Pertamina EP Cepu",
+      "location": "Jakarta",
+      "desc": "Operated within a Hybrid SDLC framework (Waterfall & Scrum) in a large-scale State-Owned Enterprise (BUMN) environment — balancing agile technical execution with strict corporate compliance and SKK Migas documentation requirements.",
+      "tags": ["Learning Management System", "KPI System", "Travel Management"]
+    },
+    {
+      "start": "Feb 2025",
+      "end": "Apr 2025",
+      "role": "Senior System Analyst",
+      "company": "Bina Nusantara IT Division",
+      "location": "West Jakarta",
+      "desc": "Led the enhancement of the Event Management Application and spearheaded the development of new Academic Advisory and Student Evaluation applications, improving operational efficiency across the platform suite.",
+      "tags": ["Event Management (Enhancement)", "Academic Advisory Apps", "Student Evaluation Apps", "Student Dashboard Helpdesk", "Graduation Photo Editor"]
+    },
+    {
+      "start": "Mar 2022",
+      "end": "Feb 2025",
+      "role": "System Analyst",
+      "company": "Bina Nusantara IT Division",
+      "location": "West Jakarta",
+      "desc": "Resolved technical cases through ticketing systems to ensure smooth application usage for students and staff, while supporting the ongoing enhancement and maintenance of core university applications. Worked alongside a master's program throughout.",
+      "tags": ["Ticketing & Case Resolution", "Academic Advisory (2023)", "Student Evaluation (2024)", "Event Management"]
+    }
+  ],
+  "projects": [
+    {
+      "year": "2025–26",
+      "title": "Learning Management System",
+      "org": "Pertamina EP Cepu",
+      "desc": "Enterprise training platform built via MII under a hybrid SDLC."
+    },
+    {
+      "year": "2025",
+      "title": "KPI System",
+      "org": "Pertamina EP Cepu",
+      "desc": "Performance measurement platform for a BUMN upstream oil & gas operator."
+    },
+    {
+      "year": "2025–26",
+      "title": "Travel Management",
+      "org": "Pertamina EP Cepu",
+      "desc": "Business travel workflow system delivered under strict BUMN compliance requirements."
+    },
+    {
+      "year": "2025",
+      "title": "Event Management Enhancement",
+      "org": "BINUS",
+      "desc": "Led enhancement of the university's event management application."
+    },
+    {
+      "year": "2024",
+      "title": "Student Evaluation Apps",
+      "org": "BINUS",
+      "desc": "Outsource build — analyst-led, end-to-end delivery for academic evaluations."
+    },
+    {
+      "year": "2023",
+      "title": "Academic Advisory Apps",
+      "org": "BINUS",
+      "desc": "New build delivering advisor–student workflows across the BINUS academic platform."
+    },
+    {
+      "year": "2025",
+      "title": "Student Dashboard Helpdesk",
+      "org": "BINUS",
+      "desc": "Helpdesk features within the student dashboard to streamline support requests."
+    },
+    {
+      "year": "2025",
+      "title": "Graduation Photo Editor",
+      "org": "BINUS",
+      "desc": "Tooling to support graduation photo processing for the university."
+    },
+    {
+      "year": "2022–25",
+      "title": "Ticketing & System Repairs",
+      "org": "BINUS",
+      "desc": "On-call resolution for student and staff issues across the BINUS application suite."
+    }
+  ],
+  "education": [
+    {
+      "start": "Apr 2024",
+      "end": "Aug 2025",
+      "degree": "Master of *Information Systems Management*",
+      "school": "Universitas Bina Nusantara",
+      "gpa": "4.00 / 4.00",
+      "honors": "**Best Graduate** — Master's in Information Systems Management Fast Track, 72nd Graduation Ceremony."
+    },
+    {
+      "start": "Sep 2020",
+      "end": "Apr 2024",
+      "degree": "Bachelor of *Information Systems*",
+      "school": "Universitas Bina Nusantara",
+      "gpa": "3.80 / 4.00",
+      "honors": "Worked full-time in the BINUS IT Division while completing undergraduate studies."
+    }
+  ],
+  "skills": [
+    {
+      "category": "Hard skills",
+      "items": ["UI / UX Design", "Data Visualization", "Azure Resources", "SQL & NoSQL", "Google Workspace"]
+    },
+    {
+      "category": "Soft skills",
+      "items": ["System Analysis", "Data Analysis", "Strategic Thinking", "Leadership", "Public Speaking"]
+    },
+    {
+      "category": "Databases & cloud",
+      "items": ["Oracle", "Microsoft SQL Server", "Azure Database", "MongoDB", "Alibaba Cloud"]
+    }
+  ],
+  "training": [
+    { "year": "2026", "title": "ISEC" },
+    { "year": "2024", "title": "IT Professional Compliance" },
+    { "year": "2023", "title": "A Dive into Comprehensive Software Testing" },
+    { "year": "2023", "title": "Advanced Technology in Education Industry" },
+    { "year": "2023", "title": "Alibaba Cloud Certified Associate", "certificate": true }
+  ],
+  "contact": {
+    "heading": "Let's *talk*.",
+    "subheading": "Open to conversations about enterprise systems, data, and digital transformation.",
+    "links": [
+      { "label": "Email", "value": "rifkianandasmp1@gmail.com", "href": "mailto:rifkianandasmp1@gmail.com" },
+      { "label": "LinkedIn", "value": "in/m-rifki-ananda-yes", "href": "https://www.linkedin.com/in/m-rifki-ananda-yes/" },
+      { "label": "Phone", "value": "+62 821-6934-5442", "href": "tel:+6282169345442" },
+      { "label": "Location", "value": "Palmerah, Jakarta", "href": "" }
+    ]
+  }
+}

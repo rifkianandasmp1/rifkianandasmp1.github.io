@@ -1,63 +1,77 @@
 # M. Rifki Ananda — Portfolio
 
-Personal portfolio with built-in admin panel for managing content.
+Personal portfolio hosted on GitHub Pages, with an admin panel that publishes
+content changes straight to this repository.
 
-## 🗂 File Structure
+Live site: https://rifkianandasmp1.github.io
+
+## File structure
 
 ```
-your-repo/
-├── index.html       ← Your portfolio (public site)
-├── admin.html       ← Master data editor (private/your eyes only)
-├── data.js          ← All content lives here
-├── images/
-│   └── profile.png  ← Your photos go here
-└── README.md
+├── index.html            ← Public portfolio
+├── admin.html            ← Content editor (needs a GitHub token to publish)
+├── data/
+│   └── portfolio.json    ← All content lives here (the "database")
+├── assets/
+│   ├── css/site.css      ← Portfolio styles (light + dark theme)
+│   ├── css/admin.css     ← Admin styles
+│   ├── js/site.js        ← Renders portfolio.json into the page
+│   ├── js/admin.js       ← Schema-driven editor
+│   └── js/github.js      ← GitHub Contents API client (the backend)
+├── images/               ← Photos
+├── favicon.svg, robots.txt, sitemap.xml, .nojekyll
 ```
 
-## 🚀 Local Preview
+## How the backend works
 
-Open `index.html` in your browser — that's it. No build step.
+GitHub Pages only serves static files, so the repository itself is the backend:
 
-To edit your data: open `admin.html` in your browser.
+1. `index.html` loads `data/portfolio.json` and renders every section from it.
+2. `admin.html` edits that JSON in the browser and, when you click **Publish**,
+   commits it to this repository through the GitHub REST API.
+3. GitHub Pages redeploys automatically — the live site updates in about a minute.
 
-## 📤 Deploy to GitHub Pages
+No server, database or hosting bill is needed. Every edit is a commit, so the
+full history is in Git and any change can be reverted.
 
-1. Create a repo named `your-username.github.io`
-2. Upload all files (`index.html`, `admin.html`, `data.js`, the `images/` folder)
-3. Visit `https://your-username.github.io` — your site is live
+## Editing content
 
-## ✏️ Updating Your Content
+1. Open `https://rifkianandasmp1.github.io/admin.html`.
+2. Click **Not connected** (top left) and paste a GitHub token — see below.
+3. Edit any section. Drafts are saved in your browser automatically.
+4. **Preview** opens the site with your unpublished draft.
+5. **Publish** (or Ctrl/Cmd + S) commits the changes.
 
-**The easy way (recommended):**
-1. Open `admin.html` in your browser
-2. Edit anything — fields auto-save to your browser's memory
-3. Click **💾 Export data.js**
-4. Upload the new `data.js` to your GitHub repo (overwriting the old one)
-5. Site updates within ~1 minute
+Uploading a new profile photo from the admin resizes it to 1200px and commits it
+to `images/`.
 
-**Adding a new photo:**
-1. Upload the image file to your repo's `images/` folder via GitHub
-2. In the admin panel's "Profile Photo Path" field, enter `images/your-filename.png`
-3. Export & upload `data.js`
+Text fields that mention it support a tiny markup: `*text*` for the accent italic
+and `**text**` for bold.
 
-**The advanced way:** edit `data.js` directly in any text editor.
+### Creating the GitHub token (one time)
 
-## 🔮 Future: When You Have a Real Server
+1. Go to **GitHub → Settings → Developer settings → Fine-grained tokens →
+   Generate new token** (https://github.com/settings/personal-access-tokens/new).
+2. **Repository access:** *Only select repositories* → `rifkianandasmp1.github.io`.
+3. **Permissions → Repository permissions → Contents:** *Read and write*.
+4. Pick an expiry, generate, and paste the token into the admin panel.
 
-The data is already structured as JSON — when you eventually run a backend:
+The token is stored only in your browser (for the current tab, or on the device if
+you tick *Remember*). Use **More → Disconnect GitHub** to remove it. Anyone can open
+`admin.html`, but nobody can publish without a token that has write access to this
+repository.
 
-1. **Portfolio side:** swap `<script src="data.js">` for a `fetch('/api/portfolio')` call
-2. **Admin side:** change the export button to `POST /api/portfolio` instead of downloading a file
-3. The data shape stays exactly the same — no UI changes needed
+## Local preview
 
-Suggested backend stack: Node.js + Express + PostgreSQL/MongoDB, or Supabase / Firebase for a managed option.
+The page loads its data with `fetch`, so open it through a local web server
+instead of double-clicking the file:
 
-## 🎨 Customization
+```bash
+python3 -m http.server 8000
+# then visit http://localhost:8000 and http://localhost:8000/admin.html
+```
 
-- **Colors:** edit the CSS variables at the top of `index.html` (`--bg`, `--accent`, etc.)
-- **Fonts:** swap the Google Fonts import in `<head>` and the `--font-*` CSS variables
-- **Layout:** all styles are in the `<style>` block in `index.html`
+## Deploying
 
----
-
-Built with ❤️ in Jakarta.
+GitHub Pages serves the default branch (`main`). Merge changes into `main` and
+the site redeploys automatically.
