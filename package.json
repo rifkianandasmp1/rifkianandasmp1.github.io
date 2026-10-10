@@ -1,0 +1,13 @@
+{
+  "name": "rifki-portfolio",
+  "private": true,
+  "type": "module",
+  "description": "Portfolio of M. Rifki Ananda — static site with a private admin API on Vercel",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vercel dev",
+    "test": "node --test"
+  }
+}
