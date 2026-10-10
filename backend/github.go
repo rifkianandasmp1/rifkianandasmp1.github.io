@@ -156,6 +156,34 @@ func (g *GitHub) GetFile(ctx context.Context, path string) (*File, error) {
 	return &File{Content: content, SHA: meta.SHA}, nil
 }
 
+// CheckTarget explains why a file lookup found nothing: it reports a
+// configuration error when the repository or branch cannot be found, and
+// returns nil when both exist (the file itself is just missing).
+func (g *GitHub) CheckTarget(ctx context.Context) error {
+	repo := g.Owner + "/" + g.Repo
+	err := g.do(ctx, http.MethodGet, g.repoPath(), nil, nil)
+	if ge, ok := err.(*ghError); ok && ge.status == http.StatusNotFound {
+		return errorf(http.StatusInternalServerError, fmt.Sprintf(
+			"Repository %q was not found or GITHUB_TOKEN cannot access it (check GITHUB_OWNER, GITHUB_REPO and the token's repository access)", repo))
+	}
+	if err != nil {
+		return toAPIError(err)
+	}
+	branch := strings.Split(g.Branch, "/")
+	for i, p := range branch {
+		branch[i] = url.PathEscape(p)
+	}
+	err = g.do(ctx, http.MethodGet, g.repoPath()+"/branches/"+strings.Join(branch, "/"), nil, nil)
+	if ge, ok := err.(*ghError); ok && ge.status == http.StatusNotFound {
+		return errorf(http.StatusInternalServerError, fmt.Sprintf(
+			"Branch %q does not exist in %s (check GITHUB_BRANCH for this environment)", g.Branch, repo))
+	}
+	if err != nil {
+		return toAPIError(err)
+	}
+	return nil
+}
+
 // PutFile creates (sha == "") or updates a file in one commit.
 func (g *GitHub) PutFile(ctx context.Context, path string, content []byte, message, sha string) (*Commit, error) {
 	body := map[string]string{

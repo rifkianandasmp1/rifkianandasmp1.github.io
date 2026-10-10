@@ -64,7 +64,7 @@ admin_session=<payload>.<signature>; Path=/; Max-Age=604800; HttpOnly; Secure; S
 | `409` | Content changed on GitHub (see [Conflicts](#conflicts)) |
 | `413` | Body or image too large |
 | `415` | Not JSON, or the upload is not a JPEG/PNG/WebP image |
-| `500` | Server not configured (missing environment variables) or unexpected error |
+| `500` | Server not configured (missing environment variables, or repository/branch not found) or unexpected error |
 | `502` | GitHub unreachable or rejected the server token |
 
 ## 3. Endpoints
@@ -115,7 +115,9 @@ copy can lag by a minute).
 }
 ```
 
-`data` and `sha` are both `null` when the file does not exist yet.
+`data` and `sha` are both `null` when the branch exists but the file does not exist yet.
+If the repository or branch cannot be found, the server returns `500` naming the setting to
+fix instead, e.g. `Branch "x" does not exist in owner/repo (check GITHUB_BRANCH for this environment)`.
 Errors: `401`, `500`, `502`.
 
 ### `PUT /api/content`

@@ -165,6 +165,7 @@
   let data = null;          // object being edited
   let published = '';       // canonical JSON of the last published/loaded version
   let baseSha = null;       // sha of data/portfolio.json the edits are based on
+  let contentMissing = false; // the repository has no content file yet
   let section = 'profile';
   const openItems = new Set();
   const localImages = {};   // path -> object URL for freshly uploaded photos
@@ -523,6 +524,9 @@
     const s = SECTIONS.find((x) => x.id === section) || SECTIONS[0];
     $('editor').replaceChildren(
       h('header', { class: 'section-header' }, h('h1', null, s.title), h('p', null, s.desc)),
+      ...(contentMissing ? [h('div', { class: 'notice warn' },
+        h('b', null, 'No content file yet. '),
+        'The repository has no data/portfolio.json on this branch. Fill in the sections and Publish to create it, or use More → Import.')] : []),
       ...s.blocks.map((b) => {
         if (b.kind === 'fields') return fieldsBlock(b);
         if (b.kind === 'strings') return stringsBlock(b);
@@ -567,8 +571,9 @@
   async function loadContent() {
     setStatus('busy', 'Loading…');
     const res = await api('/api/content');
+    contentMissing = !res.data;
     data = res.data || emptyData();
-    published = res.data ? canonical(res.data) : '';
+    published = canonical(data);
     baseSha = res.sha;
     restoreDraft();
     setStatus('on', 'Signed in · publishing to GitHub');
@@ -595,12 +600,22 @@
     $('login-error').hidden = true;
     try {
       await api('/api/auth', { method: 'POST', body: { password: form.password.value } });
-      form.password.value = '';
-      $('login-dialog').close();
+    } catch (err) {
+      $('login-error').textContent = err.message;
+      $('login-error').hidden = false;
+      return;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Sign in';
+    }
+    form.password.value = '';
+    $('login-dialog').close();
+    try {
       if (data && isDirty()) {
         // Session expired mid-edit: keep the edits, just refresh the published baseline.
         const res = await api('/api/content');
-        published = res.data ? canonical(res.data) : '';
+        contentMissing = !res.data;
+        published = canonical(res.data || emptyData());
         baseSha = res.sha;
         setStatus('on', 'Signed in · publishing to GitHub');
         refreshStatus();
@@ -608,11 +623,7 @@
         await loadContent();
       }
     } catch (err) {
-      $('login-error').textContent = err.message;
-      $('login-error').hidden = false;
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Sign in';
+      showFatal(err);
     }
   });
   // Escape must not dismiss the login screen.
@@ -660,6 +671,7 @@
       data = res.data;
       published = canonical(res.data);
       baseSha = res.sha;
+      contentMissing = false;
       clearDraft();
       $('publish-dialog').close();
       renderEditor();
@@ -745,10 +757,12 @@
     if (isDirty()) { saveDraft(); e.preventDefault(); e.returnValue = ''; }
   });
 
-  init().catch((err) => {
+  function showFatal(err) {
     console.error(err);
     setStatus('error', 'Server unavailable');
     $('app').hidden = false;
     $('editor').replaceChildren(h('div', { class: 'empty' }, 'Could not start the admin panel: ' + err.message));
-  });
+  }
+
+  init().catch(showFatal);
 })();

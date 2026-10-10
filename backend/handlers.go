@@ -69,6 +69,9 @@ func Content(s *Server, w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 		if file == nil {
+			if err := s.GitHub.CheckTarget(r.Context()); err != nil {
+				return err
+			}
 			writeJSON(w, http.StatusOK, map[string]any{"data": nil, "sha": nil})
 			return nil
 		}
@@ -112,6 +115,8 @@ func Content(s *Server, w http.ResponseWriter, r *http.Request) error {
 		latestSHA := ""
 		if latest != nil {
 			latestSHA = latest.SHA
+		} else if err := s.GitHub.CheckTarget(r.Context()); err != nil {
+			return err
 		}
 		if !body.Force && body.BaseSHA != "" && latestSHA != "" && body.BaseSHA != latestSHA {
 			return &APIError{

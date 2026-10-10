@@ -30,11 +30,21 @@ func (f *fakeGitHub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
+	switch r.URL.Path {
+	case "/repos/owner/repo", "/repos/owner/repo/branches/main":
+		fmt.Fprint(w, `{}`)
+		return
+	}
+	if !strings.HasPrefix(r.URL.Path, "/repos/owner/repo/contents/") {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(w, `{"message":"Not Found"}`)
+		return
+	}
 	path := strings.TrimPrefix(r.URL.Path, "/repos/owner/repo/contents/")
 	switch r.Method {
 	case http.MethodGet:
 		file, ok := f.files[path]
-		if !ok {
+		if !ok || r.URL.Query().Get("ref") != "main" {
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprint(w, `{"message":"Not Found"}`)
 			return
@@ -311,5 +321,35 @@ func TestFromEnvReportsMissingConfig(t *testing.T) {
 	_, err := FromEnv()
 	if err == nil || !strings.Contains(err.Error(), "GITHUB_TOKEN") || !strings.Contains(err.Error(), "ADMIN_PASSWORD") {
 		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestMissingContentExplainsMisconfiguration(t *testing.T) {
+	s, gh := setup(t)
+	cookie := login(t, s)
+	get := func() (int, map[string]any) {
+		w := do(s, Content, call{method: "GET", path: "/api/content", cookie: cookie})
+		return w.Code, decode(t, w)
+	}
+
+	s.GitHub.Branch = "typo-branch"
+	if code, body := get(); code != 500 || !strings.Contains(body["error"].(string), `Branch "typo-branch" does not exist`) {
+		t.Errorf("wrong branch: %d %v", code, body)
+	}
+	w := do(s, Content, call{method: "PUT", path: "/api/content", cookie: cookie, body: `{"data":{"profile":{}}}`})
+	if w.Code != 500 || len(gh.commits) != 0 {
+		t.Errorf("publish to wrong branch: %d, commits %d", w.Code, len(gh.commits))
+	}
+
+	s.GitHub.Branch = "main"
+	s.GitHub.Repo = "wrong-repo"
+	if code, body := get(); code != 500 || !strings.Contains(body["error"].(string), `"owner/wrong-repo" was not found`) {
+		t.Errorf("wrong repo: %d %v", code, body)
+	}
+
+	s.GitHub.Repo = "repo"
+	delete(gh.files, DataPath)
+	if code, body := get(); code != 200 || body["data"] != nil {
+		t.Errorf("missing file on a valid branch: %d %v", code, body)
 	}
 }

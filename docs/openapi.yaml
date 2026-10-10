@@ -122,7 +122,7 @@ paths:
         - sessionCookie: []
       responses:
         '200':
-          description: The document and its blob SHA. Both are `null` when the file does not exist yet.
+          description: The document and its blob SHA. Both are `null` when the branch exists but the file does not exist yet.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ContentResponse' }
@@ -302,7 +302,7 @@ components:
           schema: { $ref: '#/components/schemas/Error' }
           example: { error: 'Only JPEG, PNG or WebP images are allowed' }
     NotConfigured:
-      description: Required environment variables are missing, or an unexpected server error.
+      description: Required environment variables are missing, the configured repository or branch does not exist, or an unexpected server error.
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
