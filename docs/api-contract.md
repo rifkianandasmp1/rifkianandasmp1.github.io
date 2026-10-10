@@ -1,6 +1,6 @@
 # Portfolio Admin API — Contract
 
-Version 1.0.0 · Machine-readable spec: [`openapi.yaml`](openapi.yaml) (OpenAPI 3.1)
+Version 1.0.0 · Machine-readable spec: [`openapi.yaml`](openapi.yaml) (OpenAPI 3.1) · Postman: [`postman/`](postman/README.md)
 
 This is the private API behind `/admin`. It is written in Go (`backend/`) and runs as
 Vercel Functions (`api/*/index.go`). The public site never calls it; it only reads the

@@ -1,0 +1,752 @@
+{
+  "info": {
+    "_postman_id": "8d1cc890-badd-47dc-b160-606a31cdc066",
+    "name": "Portfolio Admin API",
+    "description": "Private Go API behind https://rifkiananda.vercel.app/admin.\n\nContract: docs/api-contract.md and docs/openapi.yaml in the repository.\n\n## How to use\n1. Import this collection and the environments.\n2. Pick an environment and fill in `admin_password` (stored as a secret, current value only).\n3. Run the folders in order, or run the whole collection with the Collection Runner.\n\nThe collection pre-request script sends the saved session cookie (`session_cookie`) on every request, so it works even where Postman's cookie jar would not send a Secure cookie (http://localhost).\n\n⚠️ Folder 4 commits to GitHub and triggers a deployment. Untick it in the runner on Production.\n\nPreview deployments can be protected by Vercel Authentication. If Preview requests return a Vercel login page, create a 'Protection Bypass for Automation' secret in Vercel (Project → Settings → Deployment Protection) and put it in the environment's `vercel_bypass` variable.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Send the saved admin session cookie, if any.",
+          "const session = pm.collectionVariables.get('session_cookie');",
+          "if (session) {",
+          "  pm.request.headers.upsert({ key: 'Cookie', value: 'admin_session=' + session });",
+          "}",
+          "// Preview deployments may sit behind Vercel Deployment Protection.",
+          "const bypass = pm.environment.get('vercel_bypass');",
+          "if (bypass) {",
+          "  pm.request.headers.upsert({ key: 'x-vercel-protection-bypass', value: bypass });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Public",
+      "description": "Unauthenticated, read-only resources served to every visitor.",
+      "item": [
+        {
+          "name": "Published content",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/data/portfolio.json",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "data",
+                "portfolio.json"
+              ]
+            },
+            "description": "The deployed copy of the content document used by the public site."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Has a profile object\", () => pm.expect(pm.response.json().profile).to.be.an(\"object\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "robots.txt",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/robots.txt",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "robots.txt"
+              ]
+            },
+            "description": "Rewritten to /api/seo?file=robots. Disallows /admin and /api/."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Disallows /admin\", () => pm.expect(pm.response.text()).to.include(\"Disallow: /admin\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "sitemap.xml",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/sitemap.xml",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sitemap.xml"
+              ]
+            },
+            "description": "Rewritten to /api/seo?file=sitemap."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Lists the home page\", () => pm.expect(pm.response.text()).to.include(\"<loc>\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Auth",
+      "description": "Sign in with the admin password. A successful sign-in saves the session cookie in the collection variable `session_cookie`; the collection pre-request script sends it on every request.",
+      "item": [
+        {
+          "name": "Session status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth"
+              ]
+            },
+            "description": "Never fails; returns whether the request carries a valid session."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"authenticated is a boolean\", () => pm.expect(pm.response.json().authenticated).to.be.a(\"boolean\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign in - wrong password (401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{base_url}}",
+                "description": "Required for POST/PUT/DELETE (CSRF check). Must match the host."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth"
+              ]
+            },
+            "description": "Negative test. Answered after a deliberate ~800 ms delay.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"definitely-not-the-password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Body has an error message\", () => pm.expect(pm.response.json().error).to.be.a(\"string\"));",
+                  "pm.test(\"No cookie is set\", () => pm.expect(pm.response.headers.get(\"Set-Cookie\")).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign in - missing Origin (403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth"
+              ]
+            },
+            "description": "Negative test. State-changing requests without an Origin header are rejected (CSRF protection).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"{{admin_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Body has an error message\", () => pm.expect(pm.response.json().error).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign in",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{base_url}}",
+                "description": "Required for POST/PUT/DELETE (CSRF check). Must match the host."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth"
+              ]
+            },
+            "description": "Signs in with `admin_password` from the environment and stores the `admin_session` cookie.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"{{admin_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const setCookie = pm.response.headers.get(\"Set-Cookie\") || \"\";",
+                  "const match = setCookie.match(/admin_session=([^;]+)/);",
+                  "pm.test(\"Sets an HttpOnly, Secure, SameSite=Strict session cookie\", () => {",
+                  "  pm.expect(match, \"admin_session cookie\").to.not.be.null;",
+                  "  pm.expect(setCookie).to.include(\"HttpOnly\");",
+                  "  pm.expect(setCookie).to.include(\"Secure\");",
+                  "  pm.expect(setCookie).to.include(\"SameSite=Strict\");",
+                  "});",
+                  "if (match) pm.collectionVariables.set(\"session_cookie\", match[1]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Session status (signed in)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth"
+              ]
+            },
+            "description": "Should now report authenticated: true."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"authenticated is true\", () => pm.expect(pm.response.json().authenticated).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Content (read + safe checks)",
+      "description": "Reads the content document from GitHub and runs validation checks that never commit.",
+      "item": [
+        {
+          "name": "Get content",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/content",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "content"
+              ]
+            },
+            "description": "Reads public/data/portfolio.json from GitHub (latest commit, not the deployed copy). Saves `content_sha` and `content_data` for the publish requests."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"Has data and sha\", () => {",
+                  "  pm.expect(body).to.have.property(\"data\");",
+                  "  pm.expect(body).to.have.property(\"sha\");",
+                  "});",
+                  "if (body.data) {",
+                  "  pm.collectionVariables.set(\"content_data\", JSON.stringify(body.data));",
+                  "  pm.collectionVariables.set(\"content_sha\", body.sha);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publish - stale baseSha (409, no commit)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{base_url}}",
+                "description": "Required for POST/PUT/DELETE (CSRF check). Must match the host."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/content",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "content"
+              ]
+            },
+            "description": "Negative test of optimistic concurrency: a baseSha that differs from the file on GitHub is rejected with 409 and `conflict: true`. Nothing is committed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {{content_data}},\n  \"baseSha\": \"0000000000000000000000000000000000000000\",\n  \"message\": \"Should not be committed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Reports a conflict with the latest sha\", () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.conflict).to.eql(true);",
+                  "  pm.expect(body.latestSha).to.be.a(\"string\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publish - invalid data (400, no commit)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{base_url}}",
+                "description": "Required for POST/PUT/DELETE (CSRF check). Must match the host."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/content",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "content"
+              ]
+            },
+            "description": "Negative test: `profile` must be an object and list sections must be arrays.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": { \"profile\": {}, \"projects\": \"not a list\" },\n  \"message\": \"Should not be committed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Body has an error message\", () => pm.expect(pm.response.json().error).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload - not an image (415, no commit)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{base_url}}",
+                "description": "Required for POST/PUT/DELETE (CSRF check). Must match the host."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/upload",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "upload"
+              ]
+            },
+            "description": "Negative test: only JPEG, PNG or WebP bytes are accepted (detected from the content, not the filename).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filename\": \"fake.jpg\",\n  \"content\": \"PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 415\", () => pm.response.to.have.status(415));",
+                  "pm.test(\"Body has an error message\", () => pm.expect(pm.response.json().error).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Writes (commit to GitHub!)",
+      "description": "⚠️ These requests create real commits on the environment's branch, and each commit triggers a Vercel deployment. Prefer the Preview or Local environment, or untick this folder in the Collection Runner.",
+      "item": [
+        {
+          "name": "⚠️ Publish content",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{base_url}}",
+                "description": "Required for POST/PUT/DELETE (CSRF check). Must match the host."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/content",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "content"
+              ]
+            },
+            "description": "Re-publishes the document read by 'Get content' (only meta.updated changes) and stores the new sha.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {{content_data}},\n  \"baseSha\": \"{{content_sha}}\",\n  \"message\": \"Publish from Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"Returns the new sha and commit URL\", () => {",
+                  "  pm.expect(body.sha).to.be.a(\"string\");",
+                  "  pm.expect(body.data.meta.updated).to.match(/^\\d{4}-\\d{2}-\\d{2}$/);",
+                  "});",
+                  "pm.collectionVariables.set(\"content_sha\", body.sha);",
+                  "pm.collectionVariables.set(\"content_data\", JSON.stringify(body.data));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "⚠️ Upload image",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{base_url}}",
+                "description": "Required for POST/PUT/DELETE (CSRF check). Must match the host."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/upload",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "upload"
+              ]
+            },
+            "description": "Commits a 1×1 PNG to public/images/. The returned path can be used as profile.photo.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filename\": \"postman-test.png\",\n  \"content\": \"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Returns a site-relative image path\", () =>",
+                  "  pm.expect(pm.response.json().path).to.match(/^images\\/postman-test-[a-z0-9]+\\.png$/));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Sign out",
+      "item": [
+        {
+          "name": "Sign out",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{base_url}}",
+                "description": "Required for POST/PUT/DELETE (CSRF check). Must match the host."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth"
+              ]
+            },
+            "description": "Clears the session cookie (Max-Age=0)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"authenticated is false\", () => pm.expect(pm.response.json().authenticated).to.eql(false));",
+                  "pm.collectionVariables.unset(\"session_cookie\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get content after sign out (401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/content",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "content"
+              ]
+            },
+            "description": "Negative test: admin endpoints require a session."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Body has an error message\", () => pm.expect(pm.response.json().error).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "session_cookie",
+      "value": "",
+      "description": "Set by 'Sign in', cleared by 'Sign out'."
+    },
+    {
+      "key": "content_sha",
+      "value": "",
+      "description": "Set by 'Get content' and 'Publish content'."
+    },
+    {
+      "key": "content_data",
+      "value": "{}",
+      "description": "Set by 'Get content' (JSON string of the document)."
+    }
+  ]
+}
