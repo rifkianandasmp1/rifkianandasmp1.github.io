@@ -49,13 +49,13 @@
         "name": "Waterfall",
         "duration": "3+ yrs",
         "percent": 80,
-        "desc": "Heavy regulatory documentation, structured phases, BUMN compliance — production-grade enterprise rigor."
+        "desc": "Phase-gated delivery for BINUS's university application suite — requirements and functional specifications, SIT & UAT sign-off, and controlled releases."
       },
       {
         "name": "Scrum / Agile",
-        "duration": "9 mos",
+        "duration": "1+ yrs",
         "percent": 20,
-        "desc": "Sprint-driven delivery, daily stand-ups, iterative refinement — applied within a hybrid SDLC at Pertamina EP Cepu."
+        "desc": "Sprint-based delivery for BUMN clients — a hybrid SDLC with SKK Migas documentation at Pertamina EP Cepu, and backlog grooming, Jira user stories and SIT & UAT at Jasa Marga."
       }
     ]
   },
