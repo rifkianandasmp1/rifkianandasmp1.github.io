@@ -2,7 +2,7 @@
   "meta": {
     "title": "M. Rifki Ananda — System & Data Analyst",
     "description": "Portfolio of M. Rifki Ananda — System & Data Analyst with 4+ years of experience in enterprise systems, SDLC, and data-driven solutions across BUMN and higher-education platforms.",
-    "updated": "2026-10-08"
+    "updated": "2026-10-10"
   },
   "profile": {
     "first_name": "M. Rifki",
@@ -170,6 +170,24 @@
       "title": "Ticketing & System Repairs",
       "org": "BINUS",
       "desc": "On-call resolution for student and staff issues across the BINUS application suite."
+    },
+    {
+      "year": "2026",
+      "title": "JM Mudik",
+      "org": "Jasa Marga Persero",
+      "desc": "A dashboard for tracking audit findings, recommendations, and follow-ups across Jasa Marga. As System Analyst, I turned stakeholder MoMs into Jira user stories, coordinated SIT & UAT, and handled data migration from dev to production, including bulk-import Excel templates with user guides"
+    },
+    {
+      "year": "2026",
+      "title": "Monitoring Audit",
+      "org": "Jasa Marga Persero",
+      "desc": "A system for recording and monitoring toll-road accidents (reports, vehicles, and victims) across regions and toll sections. Took over the project from another team, led grooming as knowledge transfer, worked on the PostgreSQL schema, and redesigned the bulk-import template to match the field team's Form 33 layout."
+    },
+    {
+      "year": "2026",
+      "title": "Jasa Marga Accident Management System",
+      "org": "Jasa Marga Persero",
+      "desc": "An Appllication for publics to supporting Lebaran homecoming traffic on Jasa Marga toll roads. As System Analyst, I [make arequirements, documentation, UAT and also as Guider to the user how the application it's use for Mudik"
     }
   ],
   "education": [
