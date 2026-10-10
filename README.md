@@ -1,37 +1,40 @@
 # M. Rifki Ananda — Portfolio
 
-Personal portfolio hosted on **Vercel**, with a password-protected admin panel
-backed by private serverless functions. The repository can stay private.
+Personal portfolio hosted on **Vercel**, with a password-protected admin panel backed by
+a private **Go** API. The repository can stay private.
 
 ## File structure
 
 ```
-├── index.html            ← Public portfolio
-├── admin.html            ← Admin panel (served at /admin, password login)
-├── data/portfolio.json   ← All content lives here (the "database")
-├── images/               ← Photos
-├── api/                  ← Private backend (Vercel Functions)
-│   ├── auth.js           ← POST login · GET session status · DELETE logout
-│   ├── content.js        ← GET / PUT data/portfolio.json (admin only)
-│   ├── upload.js         ← POST image upload (admin only)
-│   ├── seo.js            ← /robots.txt and /sitemap.xml for any domain
-│   └── _lib/             ← Shared helpers (not exposed as routes)
-├── assets/css, assets/js ← Site and admin front-end
-├── test/api.test.js      ← API tests (npm test)
-└── vercel.json           ← Rewrites and security headers
+├── public/                  ← Everything served to visitors
+│   ├── index.html           ← Portfolio
+│   ├── admin.html           ← Admin panel (served at /admin)
+│   ├── data/portfolio.json  ← All content (the "database")
+│   ├── images/              ← Photos
+│   └── assets/              ← CSS and JS for the site and the admin
+├── backend/                 ← Go API: auth, content, upload, GitHub client (+ tests)
+├── api/*/index.go           ← Vercel Function entrypoints, one per route
+├── cmd/dev/                 ← Local dev server (go run ./cmd/dev)
+├── docs/
+│   ├── api-contract.md      ← API contract (read this first)
+│   └── openapi.yaml         ← Same contract as OpenAPI 3.1
+├── go.mod
+└── vercel.json              ← Output dir, rewrites, security headers
 ```
+
+Only `public/` is served as static files, so the Go source is never downloadable.
 
 ## How it works
 
 1. Visitors get static files: `index.html` renders `data/portfolio.json`.
-2. `/admin` asks for a password. The server checks it against `ADMIN_PASSWORD`
-   and sets an HttpOnly, signed session cookie (valid 7 days).
-3. **Publish** sends the content to `/api/content`, which commits
-   `data/portfolio.json` to GitHub using a token stored only in Vercel.
+2. `/admin` asks for a password. The Go API checks it against `ADMIN_PASSWORD` and
+   sets an HttpOnly, signed session cookie (valid 7 days).
+3. **Publish** sends the content to `PUT /api/content`, which commits
+   `public/data/portfolio.json` to GitHub using a token stored only in Vercel.
 4. The commit triggers a new Vercel deployment; the site updates in about a minute.
 
-The GitHub token never reaches the browser, every change is a Git commit (easy to
-revert), and no database or paid service is needed.
+Every change is a Git commit (easy to revert), and no database is needed.
+Endpoints, payloads and error codes are specified in [`docs/api-contract.md`](docs/api-contract.md).
 
 ## Setting up Vercel (one time)
 
@@ -39,12 +42,13 @@ revert), and no database or paid service is needed.
 GitHub → Settings → Developer settings → **Fine-grained tokens** → Generate new token:
 - **Repository access:** Only select repositories → this repository
 - **Permissions → Repository → Contents:** Read and write
-- Pick a long expiry and note the date — publishing stops working when it expires.
+- Pick a long expiry and note the date. Publishing stops working when it expires.
 
 ### 2. Import the project
 1. Sign in at https://vercel.com with your GitHub account.
 2. **Add New → Project** → import this repository.
-3. Framework preset: **Other**. Leave the build command and output directory empty.
+3. Framework preset: **Other**. Leave the build command empty; the output directory
+   (`public`) comes from `vercel.json`.
 
 ### 3. Environment variables (Project → Settings → Environment Variables)
 
@@ -62,32 +66,29 @@ Redeploy after adding or changing variables. Changing `SESSION_SECRET` signs eve
 ### 4. Domain
 The site is live at `https://<project>.vercel.app`. To use your own domain:
 Project → Settings → **Domains** → add it and follow the DNS instructions.
-Then put the full URL in the `og:image` tag in `index.html` so link previews work.
+Then put the full URL in the `og:image` tag in `public/index.html` so link previews work.
 
 ### 5. Make the repository private (optional)
 GitHub → repository **Settings → General → Danger Zone → Change visibility**.
-Vercel keeps deploying private repositories. On a free GitHub plan this also
-switches off the old GitHub Pages site.
+Vercel keeps deploying private repositories. On a free GitHub plan this also switches
+off the old GitHub Pages site.
 
 ## Editing content
 
-Open `/admin`, sign in, edit, then **Publish** (or Ctrl/Cmd + S). Drafts are saved in
-the browser, **Preview** shows the unpublished draft, and photo uploads are resized
-to 1200px and committed to `images/`.
+Open `/admin`, sign in, edit, then **Publish** (or Ctrl/Cmd + S). Drafts are saved in the
+browser, **Preview** shows the unpublished draft, and photo uploads are resized to 1200px.
 
 Text fields support a tiny markup: `*text*` for the accent italic and `**text**` for bold.
 
 ## Local development
 
-```bash
-npm i -g vercel
-vercel link          # connect to the Vercel project
-vercel env pull      # download the environment variables into .env.local
-vercel dev           # http://localhost:3000 and http://localhost:3000/admin
-```
-
-Run the API tests (no network needed):
+Requires Go 1.24+.
 
 ```bash
-npm test
+# .env.local (git-ignored) holds the same variables as Vercel
+go run ./cmd/dev          # http://localhost:3000 and http://localhost:3000/admin
+go test ./...             # API tests, no network needed
 ```
+
+Publishing from the local admin commits to the real repository. `vercel dev` also works
+if you prefer the Vercel CLI.
