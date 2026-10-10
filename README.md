@@ -64,9 +64,9 @@ GitHub → Settings → Developer settings → **Fine-grained tokens** → Gener
 Redeploy after adding or changing variables. Changing `SESSION_SECRET` signs everyone out.
 
 ### 4. Domain
-The site is live at `https://<project>.vercel.app`. To use your own domain:
+The site is live at https://rifkiananda.vercel.app. To use your own domain:
 Project → Settings → **Domains** → add it and follow the DNS instructions.
-Then put the full URL in the `og:image` tag in `public/index.html` so link previews work.
+Then update the `og:image`, `og:url` and canonical URLs in `public/index.html` so link previews work.
 
 ### 5. Make the repository private (optional)
 GitHub → repository **Settings → General → Danger Zone → Change visibility**.
