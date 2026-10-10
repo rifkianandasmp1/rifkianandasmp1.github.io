@@ -142,7 +142,7 @@
     $('hero-role').textContent = [p.role, p.location].filter(Boolean).join(' · ');
     $('hero-tagline').innerHTML = rich(p.tagline);
 
-    const links = list(D.contact && D.contact.links);
+    const links = visible(D.contact && D.contact.links);
     const email = links.find((l) => /^mailto:/i.test(l.href || ''));
     const linkedin = links.find((l) => /linkedin\.com/i.test(l.href || ''));
     $('hero-actions').innerHTML = [

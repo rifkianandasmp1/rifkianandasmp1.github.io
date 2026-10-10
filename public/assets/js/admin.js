@@ -132,7 +132,7 @@
       ],
     },
     {
-      id: 'contact', title: 'Contact', desc: 'Closing call-to-action and contact links.',
+      id: 'contact', title: 'Contact', count: 'contact.links', desc: 'Closing call-to-action and contact cards. Hiding the email or LinkedIn card also hides its button in the hero.',
       blocks: [
         { kind: 'fields', fields: [
           { path: 'contact.heading', label: 'Heading', hint: RICH },
@@ -142,6 +142,7 @@
           summary: (l) => [l.label, l.value],
           blank: () => ({ label: '', value: '', href: '' }),
           fields: [
+            { key: 'active', label: 'Show on website', type: 'active', full: true },
             { key: 'label', label: 'Label' },
             { key: 'value', label: 'Displayed text' },
             { key: 'href', label: 'Link', full: true, hint: 'https://…, mailto:…, tel:… — leave empty for plain text.' },
