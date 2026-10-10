@@ -482,6 +482,7 @@ components:
               items:
                 type: object
                 properties:
+                  active: { type: boolean, default: true, description: 'false hides the card (and its hero button for email/LinkedIn).' }
                   label: { type: string, example: Email }
                   value: { type: string, example: name@example.com }
                   href:

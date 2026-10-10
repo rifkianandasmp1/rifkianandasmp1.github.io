@@ -219,13 +219,14 @@ when the site renders it.
   "training":    [ { "active": true, "year": "", "title": "", "certificate": true } ],
   "contact": {
     "heading": "rich", "subheading": "",
-    "links": [ { "label": "", "value": "", "href": "https://… | mailto:… | tel:… | \"\"" } ]
+    "links": [ { "active": true, "label": "", "value": "", "href": "https://… | mailto:… | tel:… | \"\"" } ]
   }
 }
 ```
 
-- `active: false` hides an item in `experience`, `projects`, `education`, `skills` or `training`.
-  Absent means shown. Hidden items are also left out of the hero stats.
+- `active: false` hides an item in `experience`, `projects`, `education`, `skills`, `training`
+  or `contact.links`. Absent means shown. Hidden items are also left out of the hero stats, and
+  a hidden email or LinkedIn link also removes its button from the hero.
 - `experience[].end` containing "Present" marks the current role.
 - `profile.stats` is no longer used. The site computes the hero stats from the visible items:
 
