@@ -112,7 +112,18 @@
         <h2 class="section-title">Projects</h2>
       </header>
       <div class="filters reveal" id="project-filters" role="group" aria-label="Filter projects by organization"></div>
-      <div class="project-grid" id="project-grid"></div>
+      <div class="carousel reveal" role="region" aria-roledescription="carousel" aria-label="Projects">
+        <div class="project-track" id="project-grid" tabindex="0"></div>
+        <div class="carousel-nav" id="project-nav" hidden>
+          <button class="icon-btn" id="project-prev" type="button" aria-label="Previous projects">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <span class="carousel-page" id="project-page" aria-live="polite">1 / 1</span>
+          <button class="icon-btn" id="project-next" type="button" aria-label="Next projects">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+          </button>
+        </div>
+      </div>
     </section>
 
     <!-- EDUCATION -->

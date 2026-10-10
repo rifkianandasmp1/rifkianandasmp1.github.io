@@ -9,6 +9,69 @@
 
   const $ = (id) => document.getElementById(id);
   const list = (v) => (Array.isArray(v) ? v : []);
+  // Items can be hidden from the site with "active": false.
+  const visible = (v) => list(v).filter((x) => x && x.active !== false);
+  const isCurrent = (e) => /present|now|current|sekarang/i.test((e && e.end) || '');
+  const PROJECTS_PER_PAGE = 6;
+
+  const MONTHS = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, mei: 4, jun: 5, jul: 6, aug: 7, agu: 7, agt: 7, sep: 8, oct: 9, okt: 9, nov: 10, dec: 11, des: 11 };
+
+  // "Mar 2022" / "2022" / "Present" → months since year 0 (null if unreadable).
+  function monthIndex(text, now) {
+    const s = String(text || '');
+    if (/present|now|current|sekarang/i.test(s)) return now.getFullYear() * 12 + now.getMonth();
+    const m = s.match(/([A-Za-z]{3})[A-Za-z]*\.?\s+(\d{4})/);
+    if (m && MONTHS[m[1].toLowerCase()] !== undefined) return Number(m[2]) * 12 + MONTHS[m[1].toLowerCase()];
+    const y = s.match(/(\d{4})/);
+    return y ? Number(y[1]) * 12 : null;
+  }
+
+  // "PT Jasa Marga (Persero) Tbk" → "Jasa Marga"
+  function shortCompany(e) {
+    if (e.company_short) return e.company_short;
+    return String(e.company || '').split(' · ')[0]
+      .replace(/^PT\.?\s+/i, '').replace(/\s*\(Persero\)/i, '').replace(/,?\s+Tbk\.?$/i, '').trim();
+  }
+
+  // Hero stats are derived from the content instead of being typed in.
+  function computeStats(D, now) {
+    const stats = [];
+
+    const jobs = visible(D.experience);
+    const starts = jobs.map((e) => monthIndex(e.start, now)).filter((x) => x !== null);
+    const ends = jobs.map((e) => monthIndex(e.end, now)).filter((x) => x !== null);
+    if (starts.length && ends.length) {
+      const months = Math.max(0, Math.max(...ends) - Math.min(...starts));
+      const years = Math.floor(months / 12);
+      if (years >= 1) stats.push({ label: 'Experience', value: String(years), suffix: months % 12 ? '+ yrs' : (years === 1 ? 'yr' : 'yrs') });
+      else stats.push({ label: 'Experience', value: String(months), suffix: months === 1 ? 'mo' : 'mos' });
+    }
+
+    stats.push({ label: 'Projects shipped', value: String(visible(D.projects).length), suffix: '' });
+
+    const latestEdu = visible(D.education)
+      .filter((e) => e.gpa)
+      .sort((a, b) => (monthIndex(b.end, now) || 0) - (monthIndex(a.end, now) || 0))[0];
+    if (latestEdu) {
+      const degree = String(latestEdu.degree || '').replace(/\*/g, '');
+      const level = /^master|^magister|^m\.\s?/i.test(degree) ? "Master's"
+        : /^bachelor|^sarjana|^s\.\s?/i.test(degree) ? "Bachelor's"
+        : /^doctor|^ph\.?d|^doktor/i.test(degree) ? 'Doctoral'
+        : /^diploma/i.test(degree) ? 'Diploma' : '';
+      const [value, scale] = String(latestEdu.gpa).split('/').map((x) => x.trim());
+      const scaleNum = Number(scale);
+      stats.push({
+        label: level ? `${level} GPA` : 'GPA',
+        value,
+        suffix: scale ? `/ ${Number.isFinite(scaleNum) ? String(scaleNum) : scale}` : '',
+      });
+    }
+
+    const current = jobs.find(isCurrent);
+    const currentName = current ? shortCompany(current) : '';
+    if (currentName) stats.push({ label: 'Currently at', value: currentName, suffix: '', text: true });
+    return stats;
+  }
 
   // Escape text for safe insertion into HTML.
   function esc(s) {
@@ -96,8 +159,10 @@
       $('hero-photo').hidden = true;
     }
 
-    $('hero-stats').innerHTML = list(p.stats).map((s) => `
-      <div class="stat">
+    const stats = computeStats(D, new Date());
+    $('hero-stats').style.setProperty('--n', stats.length);
+    $('hero-stats').innerHTML = stats.map((s) => `
+      <div class="stat${s.text ? ' stat-text' : ''}">
         <dt>${esc(s.label)}</dt>
         <dd>${esc(s.value)}${s.suffix ? `<span>${esc(s.suffix)}</span>` : ''}</dd>
       </div>`).join('');
@@ -126,8 +191,8 @@
     if (!list(method.items).length) document.querySelector('.method').hidden = true;
 
     // Experience
-    $('timeline').innerHTML = list(D.experience).map((e) => {
-      const current = /present|now|sekarang/i.test(e.end || '');
+    $('timeline').innerHTML = visible(D.experience).map((e) => {
+      const current = isCurrent(e);
       return `
       <li class="job${current ? ' current' : ''}">
         <div class="job-when">
@@ -144,15 +209,8 @@
       </li>`;
     }).join('');
 
-    // Projects + filters
-    const projects = list(D.projects);
-    $('project-grid').innerHTML = projects.map((pr) => `
-      <article class="project" data-org="${esc(pr.org || '')}">
-        <div class="project-meta"><span class="org">${esc(pr.org)}</span><span>${esc(pr.year)}</span></div>
-        <h3 class="project-title">${esc(pr.title)}</h3>
-        <p class="project-desc">${rich(pr.desc)}</p>
-      </article>`).join('');
-
+    // Projects: filter buttons + pages of PROJECTS_PER_PAGE cards
+    const projects = visible(D.projects);
     const orgs = [];
     projects.forEach((pr) => { if (pr.org && !orgs.includes(pr.org)) orgs.push(pr.org); });
     const filters = $('project-filters');
@@ -164,19 +222,36 @@
       filters.addEventListener('click', (ev) => {
         const b = ev.target.closest('.filter-btn');
         if (!b) return;
-        const value = b.dataset.filter;
         filters.querySelectorAll('.filter-btn').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-        document.querySelectorAll('#project-grid .project').forEach((card) => {
-          card.hidden = !!value && card.dataset.org !== value;
-          card.classList.add('in');
-        });
+        renderProjects(b.dataset.filter);
       });
     } else {
       filters.hidden = true;
     }
+    setupCarousel();
+    renderProjects('');
+
+    function renderProjects(org) {
+      const shown = org ? projects.filter((pr) => pr.org === org) : projects;
+      const pages = [];
+      for (let i = 0; i < shown.length; i += PROJECTS_PER_PAGE) pages.push(shown.slice(i, i + PROJECTS_PER_PAGE));
+      const track = $('project-grid');
+      track.innerHTML = pages.map((page, i) => `
+        <div class="project-page" role="group" aria-roledescription="slide" aria-label="Projects ${i + 1} of ${pages.length}">
+          ${page.map((pr) => `
+          <article class="project">
+            <div class="project-meta"><span class="org">${esc(pr.org)}</span><span>${esc(pr.year)}</span></div>
+            <h3 class="project-title">${esc(pr.title)}</h3>
+            <p class="project-desc">${rich(pr.desc)}</p>
+          </article>`).join('')}
+        </div>`).join('');
+      track.scrollLeft = 0;
+      $('project-nav').hidden = pages.length <= 1;
+      updateCarousel();
+    }
 
     // Education
-    $('edu-grid').innerHTML = list(D.education).map((e) => `
+    $('edu-grid').innerHTML = visible(D.education).map((e) => `
       <article class="edu">
         <div class="edu-top">
           <span class="edu-when">${esc(e.start)} — ${esc(e.end)}</span>
@@ -188,12 +263,12 @@
       </article>`).join('');
 
     // Skills & training
-    $('skills-grid').innerHTML = list(D.skills).map((s) => `
+    $('skills-grid').innerHTML = visible(D.skills).map((s) => `
       <div class="skill-group">
         <h3>${esc(s.category)}</h3>
         <ul class="chips">${list(s.items).map((i) => `<li class="chip">${esc(i)}</li>`).join('')}</ul>
       </div>`).join('');
-    $('training-list').innerHTML = list(D.training).map((t) => `
+    $('training-list').innerHTML = visible(D.training).map((t) => `
       <li>
         <span class="training-year">${esc(t.year)}</span>
         <span>${esc(t.title)}</span>
@@ -223,20 +298,40 @@
     // Structured data for search engines
     const ld = document.createElement('script');
     ld.type = 'application/ld+json';
-    const current = list(D.experience).find((e) => /present/i.test(e.end || ''));
+    const current = visible(D.experience).find(isCurrent);
     ld.textContent = JSON.stringify({
       '@context': 'https://schema.org',
       '@type': 'Person',
       name: fullName,
       jobTitle: p.role,
       worksFor: current ? { '@type': 'Organization', name: current.company } : undefined,
-      alumniOf: list(D.education).map((e) => ({ '@type': 'CollegeOrUniversity', name: e.school })),
+      alumniOf: visible(D.education).map((e) => ({ '@type': 'CollegeOrUniversity', name: e.school })),
       address: p.location ? { '@type': 'PostalAddress', addressLocality: p.location } : undefined,
       email: email ? email.value : undefined,
       sameAs: linkedin ? [linkedin.href] : undefined,
       image: p.photo ? new URL(p.photo, location.href).href : undefined,
     });
     document.head.appendChild(ld);
+  }
+
+  // ---------- Project carousel ----------
+  function updateCarousel() {
+    const track = $('project-grid');
+    const pages = track.children.length;
+    const page = pages ? Math.min(pages - 1, Math.round(track.scrollLeft / Math.max(1, track.clientWidth))) : 0;
+    $('project-page').textContent = `${page + 1} / ${pages}`;
+    $('project-prev').disabled = page <= 0;
+    $('project-next').disabled = page >= pages - 1;
+  }
+
+  function setupCarousel() {
+    const track = $('project-grid');
+    const go = (dir) => track.scrollBy({ left: dir * track.clientWidth, behavior: 'smooth' });
+    $('project-prev').addEventListener('click', () => go(-1));
+    $('project-next').addEventListener('click', () => go(1));
+    let t;
+    track.addEventListener('scroll', () => { clearTimeout(t); t = setTimeout(updateCarousel, 80); }, { passive: true });
+    window.addEventListener('resize', updateCarousel);
   }
 
   // ---------- UI behaviour ----------
@@ -277,7 +372,7 @@
 
   function setupObservers() {
     if (!('IntersectionObserver' in window)) {
-      document.querySelectorAll('.reveal, .job, .project, .edu').forEach((el) => el.classList.add('in'));
+      document.querySelectorAll('.reveal, .job, .edu').forEach((el) => el.classList.add('in'));
       return;
     }
     const reveal = new IntersectionObserver((entries) => {
@@ -285,7 +380,7 @@
         if (en.isIntersecting) { en.target.classList.add('in'); reveal.unobserve(en.target); }
       });
     }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
-    document.querySelectorAll('.reveal, .job, .project, .edu').forEach((el) => reveal.observe(el));
+    document.querySelectorAll('.reveal, .job, .edu').forEach((el) => reveal.observe(el));
 
     // Highlight the nav link of the section in view
     const links = new Map();

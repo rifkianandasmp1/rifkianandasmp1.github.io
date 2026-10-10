@@ -208,16 +208,15 @@ when the site renders it.
     "first_name": "M. Rifki", "last_name": "Ananda",                       // last name in accent italic
     "role": "", "location": "", "status": "",                              // empty status hides the pill
     "tagline": "rich",
-    "photo": "images/profile.png",
-    "stats": [ { "label": "", "value": "", "suffix": "" } ]
+    "photo": "images/profile.png"
   },
   "about":       { "lead": "rich", "paragraphs": ["rich"] },
   "methodology": { "label": "", "items": [ { "name": "", "duration": "", "percent": 0, "desc": "rich" } ] },
-  "experience":  [ { "start": "Apr 2026", "end": "Present", "role": "", "company": "", "location": "", "desc": "rich", "tags": [""] } ],
-  "projects":    [ { "year": "", "title": "", "org": "", "desc": "rich" } ],   // org drives the filter buttons
-  "education":   [ { "start": "", "end": "", "degree": "rich", "school": "", "gpa": "", "honors": "rich" } ],
-  "skills":      [ { "category": "", "items": [""] } ],
-  "training":    [ { "year": "", "title": "", "certificate": true } ],
+  "experience":  [ { "active": true, "start": "Apr 2026", "end": "Present", "role": "", "company": "", "company_short": "", "location": "", "desc": "rich", "tags": [""] } ],
+  "projects":    [ { "active": true, "year": "", "title": "", "org": "", "desc": "rich" } ],   // org drives the filter buttons
+  "education":   [ { "active": true, "start": "", "end": "", "degree": "rich", "school": "", "gpa": "", "honors": "rich" } ],
+  "skills":      [ { "active": true, "category": "", "items": [""] } ],
+  "training":    [ { "active": true, "year": "", "title": "", "certificate": true } ],
   "contact": {
     "heading": "rich", "subheading": "",
     "links": [ { "label": "", "value": "", "href": "https://… | mailto:… | tel:… | \"\"" } ]
@@ -225,7 +224,19 @@ when the site renders it.
 }
 ```
 
+- `active: false` hides an item in `experience`, `projects`, `education`, `skills` or `training`.
+  Absent means shown. Hidden items are also left out of the hero stats.
 - `experience[].end` containing "Present" marks the current role.
+- `profile.stats` is no longer used. The site computes the hero stats from the visible items:
+
+| Stat | Rule |
+|---|---|
+| Experience | Earliest `experience[].start` to the latest `end` ("Present" = today). Shown as whole years (`4+ yrs`), or months under a year |
+| Projects shipped | Number of visible `projects` |
+| GPA | `gpa` of the visible education with the latest `end`; the label follows the degree ("Master's GPA", "Bachelor's GPA", …) |
+| Currently at | `company_short` of the current role, or `company` shortened (text before " · ", without "PT", "(Persero)", "Tbk"). Hidden when there is no current role |
+
+- The project archive shows 6 cards per page, with previous/next buttons when there are more.
 - `contact.links[].href` with any other scheme is rendered as plain text.
 
 ## 5. Configuration

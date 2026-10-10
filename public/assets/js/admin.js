@@ -13,7 +13,7 @@
   // ---------- Content schema (drives the whole editor) ----------
   const SECTIONS = [
     {
-      id: 'profile', title: 'Profile', desc: 'Name, headline, photo and the stats under the hero.',
+      id: 'profile', title: 'Profile', desc: 'Name, headline and photo.',
       blocks: [
         { kind: 'fields', fields: [
           { path: 'profile.first_name', label: 'First name' },
@@ -24,14 +24,7 @@
           { path: 'profile.tagline', label: 'Tagline', type: 'textarea', full: true, hint: RICH },
           { path: 'profile.photo', label: 'Profile photo', type: 'image', full: true },
         ] },
-        { kind: 'list', title: 'Hero stats', path: 'profile.stats', noun: 'stat',
-          summary: (s) => [s.label, [s.value, s.suffix].filter(Boolean).join(' ')],
-          blank: () => ({ label: '', value: '', suffix: '' }),
-          fields: [
-            { key: 'label', label: 'Label' },
-            { key: 'value', label: 'Value' },
-            { key: 'suffix', label: 'Suffix', hint: 'Optional, e.g. "+ yrs" or "/ 4".' },
-          ] },
+        { kind: 'note', html: '<b>Hero stats are calculated automatically</b> from your content: <b>Experience</b> spans your first start date to your latest end date (a role ending in "Present" counts up to today), <b>Projects shipped</b> counts the projects shown on the site, the <b>GPA</b> comes from your most recent degree, and <b>Currently at</b> uses your current role (its short name). Hidden items are not counted.' },
       ],
     },
     {
@@ -63,8 +56,10 @@
           summary: (e) => [e.role, [e.company, [e.start, e.end].filter(Boolean).join(' — ')].filter(Boolean).join(' · ')],
           blank: () => ({ start: '', end: 'Present', role: '', company: '', location: '', desc: '', tags: [] }),
           fields: [
+            { key: 'active', label: 'Show on website', type: 'active', full: true },
             { key: 'role', label: 'Role' },
             { key: 'company', label: 'Company' },
+            { key: 'company_short', label: 'Short name', hint: 'Shown as "Currently at" in the hero, e.g. Jasa Marga. Empty: derived from the company.' },
             { key: 'start', label: 'Start', hint: 'e.g. "Apr 2026".' },
             { key: 'end', label: 'End', hint: '"Present" marks it as your current role.' },
             { key: 'location', label: 'Location' },
@@ -81,6 +76,7 @@
           summary: (p) => [p.title, [p.org, p.year].filter(Boolean).join(' · ')],
           blank: () => ({ year: String(new Date().getFullYear()), title: '', org: '', desc: '' }),
           fields: [
+            { key: 'active', label: 'Show on website', type: 'active', full: true },
             { key: 'title', label: 'Title' },
             { key: 'org', label: 'Organization' },
             { key: 'year', label: 'Year', hint: 'e.g. "2025" or "2025–26".' },
@@ -96,6 +92,7 @@
           summary: (e) => [String(e.degree || '').replace(/\*/g, ''), e.school],
           blank: () => ({ start: '', end: '', degree: '', school: '', gpa: '', honors: '' }),
           fields: [
+            { key: 'active', label: 'Show on website', type: 'active', full: true },
             { key: 'degree', label: 'Degree', full: true, hint: 'Wrap the field of study in *asterisks* to highlight it.' },
             { key: 'school', label: 'School' },
             { key: 'gpa', label: 'GPA', hint: 'e.g. "4.00 / 4.00".' },
@@ -113,6 +110,7 @@
           summary: (s) => [s.category, `${(s.items || []).length} items`],
           blank: () => ({ category: '', items: [] }),
           fields: [
+            { key: 'active', label: 'Show on website', type: 'active', full: true },
             { key: 'category', label: 'Category', full: true },
             { key: 'items', label: 'Skills', type: 'tags', full: true },
           ] },
@@ -126,6 +124,7 @@
           summary: (t) => [t.title, t.year],
           blank: () => ({ year: String(new Date().getFullYear()), title: '' }),
           fields: [
+            { key: 'active', label: 'Show on website', type: 'active', full: true },
             { key: 'title', label: 'Title' },
             { key: 'year', label: 'Year' },
             { key: 'certificate', label: 'This is a certification', type: 'checkbox', full: true },
@@ -326,6 +325,13 @@
 
     if (type === 'image') return imageField(def, get, set, after);
 
+    if (type === 'active') {
+      // Absent means shown; only an explicit false hides the item.
+      return h('label', { class: 'check' + (def.full ? ' full' : '') },
+        h('input', { type: 'checkbox', checked: get() !== false, onchange: (e) => { set(e.target.checked ? undefined : false); after(); } }),
+        def.label);
+    }
+
     let input;
     if (type === 'textarea') {
       input = h('textarea', { rows: def.rows || 3, value: get() || '', oninput: (e) => { set(e.target.value); after(); } });
@@ -441,9 +447,12 @@
         const titleEl = h('span', { class: 'item-title' });
         const updateTitle = () => {
           const [title, sub] = block.summary(item);
-          titleEl.replaceChildren(title || h('i', { class: 'muted' }, `Untitled ${block.noun}`), sub ? h('span', { class: 'sub' }, sub) : '');
+          titleEl.replaceChildren(
+            title || h('i', { class: 'muted' }, `Untitled ${block.noun}`),
+            sub ? h('span', { class: 'sub' }, sub) : '',
+            item.active === false ? h('span', { class: 'tag-hidden' }, 'Hidden') : '');
+          el.classList.toggle('is-hidden', item.active === false);
         };
-        updateTitle();
 
         const move = (dir) => (e) => {
           e.stopPropagation();
@@ -490,6 +499,7 @@
           }, updateTitle)));
 
         el.append(head, body);
+        updateTitle();
         return el;
       }));
     };
@@ -546,7 +556,7 @@
   function emptyData() {
     return {
       meta: { title: '', description: '' },
-      profile: { first_name: '', last_name: '', role: '', location: '', status: '', tagline: '', photo: '', stats: [] },
+      profile: { first_name: '', last_name: '', role: '', location: '', status: '', tagline: '', photo: '' },
       about: { lead: '', paragraphs: [] },
       methodology: { label: '', items: [] },
       experience: [], projects: [], education: [], skills: [], training: [],
