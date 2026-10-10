@@ -13,14 +13,15 @@
 </head>
 <body>
 
+<div id="app" hidden>
 <header class="topbar">
   <div class="topbar-left">
     <a class="logo" href="./" title="Open portfolio">RA</a>
     <div>
       <div class="topbar-title">Portfolio Admin</div>
-      <button type="button" class="conn" id="conn-status" data-state="off">
-        <span class="dot"></span><span class="conn-text">Not connected</span>
-      </button>
+      <span class="conn" id="conn-status" data-state="off">
+        <span class="dot"></span><span class="conn-text">Signed out</span>
+      </span>
     </div>
   </div>
   <div class="topbar-actions">
@@ -32,7 +33,7 @@
         <button type="button" data-action="download">Download portfolio.json</button>
         <button type="button" data-action="import">Import portfolio.json…</button>
         <button type="button" data-action="discard">Discard local changes</button>
-        <button type="button" data-action="disconnect" id="menu-disconnect">Disconnect GitHub</button>
+        <button type="button" data-action="logout">Sign out</button>
       </div>
     </div>
     <button type="button" class="btn btn-primary" id="btn-publish">Publish</button>
@@ -45,36 +46,20 @@
     <div class="empty">Loading…</div>
   </main>
 </div>
+</div>
 
 <input type="file" id="import-file" accept="application/json,.json" hidden />
 <input type="file" id="photo-file" accept="image/*" hidden />
 
-<!-- Connect dialog -->
-<dialog id="connect-dialog" class="dialog">
-  <form method="dialog" id="connect-form">
-    <h2>Connect to GitHub</h2>
-    <p class="muted">Your GitHub repository is the backend: publishing commits <code>data/portfolio.json</code>, and GitHub Pages redeploys the site in about a minute.</p>
-
-    <ol class="steps">
-      <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub → Fine-grained tokens → Generate new token</a>.</li>
-      <li><b>Repository access:</b> Only select repositories → <span id="repo-hint">this repository</span>.</li>
-      <li><b>Permissions → Repository → Contents:</b> Read and write. Nothing else is needed.</li>
-      <li>Generate, copy the token and paste it below.</li>
-    </ol>
-
-    <div class="grid-2">
-      <label class="field"><span>Owner</span><input name="owner" required autocomplete="off" /></label>
-      <label class="field"><span>Repository</span><input name="repo" required autocomplete="off" /></label>
-    </div>
-    <label class="field"><span>Branch <em>(leave empty for the default branch)</em></span><input name="branch" autocomplete="off" placeholder="main" /></label>
-    <label class="field"><span>Personal access token</span><input name="token" type="password" required autocomplete="off" placeholder="github_pat_…" /></label>
-    <label class="check"><input type="checkbox" name="remember" /> Remember on this device <em>(only on your own computer)</em></label>
-
-    <p class="form-error" id="connect-error" hidden></p>
-    <div class="dialog-actions">
-      <button type="button" class="btn" value="cancel" id="connect-cancel">Cancel</button>
-      <button type="submit" class="btn btn-primary" id="connect-submit">Connect</button>
-    </div>
+<!-- Login -->
+<dialog id="login-dialog" class="dialog dialog-login">
+  <form id="login-form">
+    <div class="login-mark">RA</div>
+    <h2>Portfolio Admin</h2>
+    <p class="muted">Sign in with the admin password set in your Vercel project.</p>
+    <label class="field"><span>Password</span><input name="password" type="password" required autocomplete="current-password" /></label>
+    <p class="form-error" id="login-error" hidden></p>
+    <button type="submit" class="btn btn-primary" id="login-submit">Sign in</button>
   </form>
 </dialog>
 
@@ -82,7 +67,7 @@
 <dialog id="publish-dialog" class="dialog">
   <form method="dialog" id="publish-form">
     <h2>Publish changes</h2>
-    <p class="muted" id="publish-target"></p>
+    <p class="muted">Commits <code>data/portfolio.json</code> to GitHub. Vercel redeploys the site in about a minute.</p>
     <ul class="changes" id="publish-changes"></ul>
     <label class="field"><span>Commit message</span><input name="message" required /></label>
     <p class="form-error" id="publish-error" hidden></p>
@@ -95,7 +80,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-<script src="assets/js/github.js"></script>
 <script src="assets/js/admin.js"></script>
 </body>
 </html>

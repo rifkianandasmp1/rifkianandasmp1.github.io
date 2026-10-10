@@ -1,0 +1,535 @@
+openapi: 3.1.0
+info:
+  title: Portfolio Admin API
+  version: 1.0.0
+  summary: Private API behind the portfolio admin panel.
+  description: |
+    Backend for `/admin` of M. Rifki Ananda's portfolio, implemented in Go
+    (`backend/`) and deployed as Vercel Functions (`api/*/index.go`).
+
+    * Content is stored in the GitHub repository as `public/data/portfolio.json`.
+      Every publish is a Git commit, which triggers a new Vercel deployment.
+    * The GitHub token is only held by the server (`GITHUB_TOKEN`).
+    * Admin endpoints require the `admin_session` cookie returned by `POST /api/auth`.
+    * State-changing requests (`POST`, `PUT`, `DELETE`) must send an `Origin`
+      header matching the site's host (CSRF protection), and bodies must be
+      `application/json`.
+
+    See `docs/api-contract.md` for the narrative contract.
+servers:
+  - url: https://{domain}
+    description: Production / preview deployment on Vercel
+    variables:
+      domain:
+        default: your-project.vercel.app
+  - url: http://localhost:3000
+    description: Local development (`go run ./cmd/dev`)
+tags:
+  - name: Auth
+    description: Admin sign-in session
+  - name: Content
+    description: Portfolio content document
+  - name: Media
+    description: Image uploads
+  - name: Public
+    description: Unauthenticated, read-only resources
+
+paths:
+  /api/auth:
+    get:
+      tags: [Auth]
+      operationId: getSession
+      summary: Check whether the caller is signed in
+      security:
+        - {}
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Session status (never fails because of a missing or invalid cookie).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionStatus' }
+              example: { authenticated: true }
+        '500': { $ref: '#/components/responses/NotConfigured' }
+    post:
+      tags: [Auth]
+      operationId: signIn
+      summary: Sign in with the admin password
+      description: |
+        Compares the password with `ADMIN_PASSWORD` in constant time. On success,
+        sets an `HttpOnly; Secure; SameSite=Strict` session cookie valid for 7 days.
+        A wrong password is answered after a deliberate ~800 ms delay.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SignInRequest' }
+            example: { password: 'my long admin password' }
+      responses:
+        '200':
+          description: Signed in.
+          headers:
+            Set-Cookie:
+              description: '`admin_session=<payload>.<signature>; Path=/; Max-Age=604800; HttpOnly; Secure; SameSite=Strict`'
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionStatus' }
+              example: { authenticated: true }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401':
+          description: Wrong password.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: Wrong password }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '413': { $ref: '#/components/responses/TooLarge' }
+        '415': { $ref: '#/components/responses/UnsupportedMediaType' }
+        '500': { $ref: '#/components/responses/NotConfigured' }
+    delete:
+      tags: [Auth]
+      operationId: signOut
+      summary: Sign out (clear the session cookie)
+      security:
+        - {}
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      responses:
+        '200':
+          description: Signed out. The cookie is cleared with `Max-Age=0`.
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionStatus' }
+              example: { authenticated: false }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/NotConfigured' }
+
+  /api/content:
+    get:
+      tags: [Content]
+      operationId: getContent
+      summary: Read the latest content document from the repository
+      description: Reads `public/data/portfolio.json` from GitHub (not the possibly older deployed copy).
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: The document and its blob SHA. Both are `null` when the branch exists but the file does not exist yet.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ContentResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/NotConfigured' }
+        '502': { $ref: '#/components/responses/GitHubError' }
+    put:
+      tags: [Content]
+      operationId: publishContent
+      summary: Publish the content document
+      description: |
+        Validates the document, sets `meta.updated` to today's date (Asia/Jakarta),
+        and commits it as `public/data/portfolio.json`, formatted with two-space
+        indentation and the client's key order preserved.
+
+        Optimistic concurrency: if `baseSha` is given and the file on GitHub has a
+        different SHA, the request fails with `409` and `conflict: true`, unless
+        `force` is `true`.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PublishRequest' }
+      responses:
+        '200':
+          description: Committed. The site redeploys in about a minute.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublishResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: |
+            The file changed on GitHub. Either since `baseSha` (`conflict: true`,
+            retry with `force: true` to overwrite) or during the commit itself
+            (reload and retry).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConflictError' }
+              example:
+                error: The portfolio data changed since you started editing.
+                conflict: true
+                latestSha: 3f1c0a9e2b7d4c6f8a1e5b9d0c2f4a6e8b0d1c3e
+        '413': { $ref: '#/components/responses/TooLarge' }
+        '415': { $ref: '#/components/responses/UnsupportedMediaType' }
+        '500': { $ref: '#/components/responses/NotConfigured' }
+        '502': { $ref: '#/components/responses/GitHubError' }
+
+  /api/upload:
+    post:
+      tags: [Media]
+      operationId: uploadImage
+      summary: Upload an image
+      description: |
+        Commits the image to `public/images/<slug>-<id>.<ext>`. The type is detected
+        from the file's bytes (JPEG, PNG or WebP), not from the filename. The admin
+        resizes photos to at most 1200 px before uploading. The returned `path` is
+        relative to the site root and can be stored in the content document
+        (e.g. `profile.photo`). It becomes reachable after the next deployment.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UploadRequest' }
+      responses:
+        '200':
+          description: Committed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UploadResponse' }
+              example: { path: images/profile-mv1xp3fs.jpg }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '413': { $ref: '#/components/responses/TooLarge' }
+        '415': { $ref: '#/components/responses/UnsupportedMediaType' }
+        '500': { $ref: '#/components/responses/NotConfigured' }
+        '502': { $ref: '#/components/responses/GitHubError' }
+
+  /data/portfolio.json:
+    get:
+      tags: [Public]
+      operationId: getPublishedContent
+      summary: Published content (static file)
+      description: "The deployed copy of the content document, used by the public site. Served with `Cache-Control: public, max-age=0, must-revalidate`."
+      security: []
+      responses:
+        '200':
+          description: The content document.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Portfolio' }
+
+  /robots.txt:
+    get:
+      tags: [Public]
+      operationId: getRobots
+      summary: robots.txt for the current domain
+      description: Rewritten to `/api/seo?file=robots`. Disallows `/admin` and `/api/`.
+      security: []
+      responses:
+        '200':
+          description: robots.txt
+          content:
+            text/plain:
+              schema: { type: string }
+
+  /sitemap.xml:
+    get:
+      tags: [Public]
+      operationId: getSitemap
+      summary: sitemap.xml for the current domain
+      description: Rewritten to `/api/seo?file=sitemap`.
+      security: []
+      responses:
+        '200':
+          description: sitemap.xml
+          content:
+            application/xml:
+              schema: { type: string }
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: admin_session
+      description: Signed session cookie issued by `POST /api/auth`. Valid for 7 days.
+
+  parameters:
+    Origin:
+      name: Origin
+      in: header
+      required: true
+      description: Must match the host serving the API. Browsers send it automatically.
+      schema: { type: string, format: uri }
+      example: https://your-project.vercel.app
+
+  responses:
+    BadRequest:
+      description: Invalid JSON, or a body that does not match the schema.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: '"data.profile" must be an object' }
+    Unauthorized:
+      description: Missing, invalid or expired session cookie.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: Not signed in }
+    Forbidden:
+      description: Missing `Origin` header or a cross-origin request.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: Cross-origin request blocked }
+    TooLarge:
+      description: Body over the limit (4 KiB for sign-in, 512 KiB for content, ~4 MiB / 3 MiB decoded for uploads).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: Request body too large }
+    UnsupportedMediaType:
+      description: Body is not `application/json`, or the upload is not a JPEG, PNG or WebP image.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: 'Only JPEG, PNG or WebP images are allowed' }
+    NotConfigured:
+      description: Required environment variables are missing, the configured repository or branch does not exist, or an unexpected server error.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: 'Server is not configured: missing or invalid: GITHUB_TOKEN' }
+    GitHubError:
+      description: GitHub could not be reached or rejected the server token.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: GitHub rejected the server token (check GITHUB_TOKEN and its Contents permission) }
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string, description: 'Human-readable message, safe to show in the UI.' }
+
+    ConflictError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            conflict:
+              type: boolean
+              const: true
+              description: Present when `baseSha` is stale. Absent for a race during the commit.
+            latestSha: { type: string, description: SHA of the file currently on GitHub. }
+
+    SessionStatus:
+      type: object
+      required: [authenticated]
+      properties:
+        authenticated: { type: boolean }
+
+    SignInRequest:
+      type: object
+      required: [password]
+      properties:
+        password: { type: string, minLength: 1 }
+
+    ContentResponse:
+      type: object
+      required: [data, sha]
+      properties:
+        data:
+          oneOf:
+            - $ref: '#/components/schemas/Portfolio'
+            - type: 'null'
+        sha:
+          type: [string, 'null']
+          description: Blob SHA of `public/data/portfolio.json`; send it back as `baseSha` when publishing.
+
+    PublishRequest:
+      type: object
+      required: [data]
+      properties:
+        data: { $ref: '#/components/schemas/Portfolio' }
+        baseSha:
+          type: string
+          description: SHA the edits are based on (from `GET /api/content`). Omit to skip the conflict check.
+        message:
+          type: string
+          maxLength: 200
+          default: Update portfolio content
+          description: Commit message. Longer messages are truncated to 200 characters.
+        force:
+          type: boolean
+          default: false
+          description: Overwrite even if `baseSha` is stale.
+
+    PublishResponse:
+      type: object
+      required: [data, sha]
+      properties:
+        data:
+          $ref: '#/components/schemas/Portfolio'
+          description: The document as committed (with `meta.updated` set).
+        sha: { type: string, description: New blob SHA; use as the next `baseSha`. }
+        commitUrl: { type: string, format: uri, description: Link to the commit on GitHub. }
+
+    UploadRequest:
+      type: object
+      required: [content]
+      properties:
+        filename:
+          type: string
+          description: Original file name; only used to build a readable slug.
+          example: My Photo.jpg
+        content:
+          type: string
+          contentEncoding: base64
+          description: Standard base64 of the image bytes (max 3 MiB decoded).
+
+    UploadResponse:
+      type: object
+      required: [path]
+      properties:
+        path:
+          type: string
+          pattern: '^images/[a-z0-9-]+\.(jpg|png|webp)$'
+
+    # ---------- Content document ----------
+    RichText:
+      type: string
+      description: Plain text with minimal markup — `*accent italic*` and `**bold**`. All other HTML is escaped by the site.
+
+    Portfolio:
+      type: object
+      description: |
+        The whole site content (`public/data/portfolio.json`). The server only
+        enforces that `profile` is an object and that the list sections are arrays;
+        the remaining fields describe what the site renders. Unknown fields are kept.
+      required: [profile]
+      additionalProperties: true
+      properties:
+        meta:
+          type: object
+          properties:
+            title: { type: string, description: Browser tab / search title. }
+            description: { type: string, description: Meta description. }
+            updated: { type: string, format: date, description: Set by the server on publish. }
+        profile: { $ref: '#/components/schemas/Profile' }
+        about:
+          type: object
+          properties:
+            lead: { $ref: '#/components/schemas/RichText' }
+            paragraphs:
+              type: array
+              items: { $ref: '#/components/schemas/RichText' }
+        methodology:
+          type: object
+          properties:
+            label: { type: string }
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  name: { type: string, example: Waterfall }
+                  duration: { type: string, example: 3+ yrs }
+                  percent: { type: number, minimum: 0, maximum: 100 }
+                  desc: { $ref: '#/components/schemas/RichText' }
+        experience:
+          type: array
+          items: { $ref: '#/components/schemas/Experience' }
+        projects:
+          type: array
+          items: { $ref: '#/components/schemas/Project' }
+        education:
+          type: array
+          items: { $ref: '#/components/schemas/Education' }
+        skills:
+          type: array
+          items:
+            type: object
+            properties:
+              category: { type: string }
+              items: { type: array, items: { type: string } }
+        training:
+          type: array
+          items:
+            type: object
+            properties:
+              year: { type: string }
+              title: { type: string }
+              certificate: { type: boolean, description: 'Shows a "Certified" badge.' }
+        contact:
+          type: object
+          properties:
+            heading: { $ref: '#/components/schemas/RichText' }
+            subheading: { type: string }
+            links:
+              type: array
+              items:
+                type: object
+                properties:
+                  label: { type: string, example: Email }
+                  value: { type: string, example: name@example.com }
+                  href:
+                    type: string
+                    description: '`https:`, `mailto:` or `tel:` link; empty for plain text. Other schemes are not linked.'
+
+    Profile:
+      type: object
+      properties:
+        first_name: { type: string }
+        last_name: { type: string, description: Rendered in accent italic. }
+        role: { type: string }
+        location: { type: string }
+        status: { type: string, description: Status pill above the name; empty hides it. }
+        tagline: { $ref: '#/components/schemas/RichText' }
+        photo: { type: string, description: 'Site-relative path, e.g. `images/profile.png`.' }
+        stats:
+          type: array
+          items:
+            type: object
+            properties:
+              label: { type: string }
+              value: { type: string }
+              suffix: { type: string }
+
+    Experience:
+      type: object
+      properties:
+        start: { type: string, example: Apr 2026 }
+        end: { type: string, example: Present, description: '"Present" marks the current role.' }
+        role: { type: string }
+        company: { type: string }
+        location: { type: string }
+        desc: { $ref: '#/components/schemas/RichText' }
+        tags: { type: array, items: { type: string } }
+
+    Project:
+      type: object
+      properties:
+        year: { type: string, example: 2025–26 }
+        title: { type: string }
+        org: { type: string, description: Used for the filter buttons. }
+        desc: { $ref: '#/components/schemas/RichText' }
+
+    Education:
+      type: object
+      properties:
+        start: { type: string }
+        end: { type: string }
+        degree: { $ref: '#/components/schemas/RichText' }
+        school: { type: string }
+        gpa: { type: string, example: 4.00 / 4.00 }
+        honors: { $ref: '#/components/schemas/RichText' }

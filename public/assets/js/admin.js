@@ -1,15 +1,13 @@
 /* ============================================================
    Portfolio admin — edits data/portfolio.json and publishes it
-   to the GitHub repository through the GitHub Contents API.
+   through the private API (api/*.js on Vercel). The GitHub token
+   lives only on the server; the browser holds a session cookie.
    ============================================================ */
 (function () {
   'use strict';
 
-  const DATA_PATH = 'data/portfolio.json';
   const DRAFT_KEY = 'portfolio-admin-draft';
-  const AUTH_KEY = 'portfolio-admin-auth';
   const SECTION_KEY = 'portfolio-admin-section';
-  const DEFAULT_REPO = { owner: 'rifkianandasmp1', repo: 'rifkianandasmp1.github.io' };
   const RICH = 'Use *text* for accent italic and **text** for bold.';
 
   // ---------- Content schema (drives the whole editor) ----------
@@ -167,7 +165,7 @@
   let data = null;          // object being edited
   let published = '';       // canonical JSON of the last published/loaded version
   let baseSha = null;       // sha of data/portfolio.json the edits are based on
-  let store = null;         // GitHubStore when connected
+  let contentMissing = false; // the repository has no content file yet
   let section = 'profile';
   const openItems = new Set();
   const localImages = {};   // path -> object URL for freshly uploaded photos
@@ -175,11 +173,6 @@
   // ---------- Utils ----------
   const $ = (id) => document.getElementById(id);
   const canonical = (obj) => JSON.stringify(obj, null, 2) + '\n';
-  const clone = (obj) => JSON.parse(JSON.stringify(obj));
-  const today = () => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  };
 
   function getPath(obj, path) {
     return path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
@@ -226,6 +219,37 @@
     toastTimer = setTimeout(() => { t.hidden = true; }, ms);
   }
 
+  // ---------- API ----------
+  class ApiError extends Error {
+    constructor(message, status, body) {
+      super(message);
+      this.status = status;
+      this.body = body;
+    }
+  }
+
+  async function api(path, { method = 'GET', body } = {}) {
+    let res;
+    try {
+      res = await fetch(path, {
+        method,
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: body ? { 'Content-Type': 'application/json' } : {},
+        body: body ? JSON.stringify(body) : undefined,
+      });
+    } catch (e) {
+      throw new ApiError('Cannot reach the server. Check your connection.', 0, {});
+    }
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      if (res.status === 401 && path !== '/api/auth') showLogin('Your session expired. Please sign in again.');
+      const fallback = res.status === 404 ? 'The admin API is not available on this host (deploy the site on Vercel).' : `Server error ${res.status}`;
+      throw new ApiError(payload.error || fallback, res.status, payload);
+    }
+    return payload;
+  }
+
   // ---------- Storage (all wrapped: storage can be unavailable) ----------
   function readJSON(storage, key) {
     try { return JSON.parse(storage.getItem(key) || 'null'); } catch (e) { return null; }
@@ -237,19 +261,6 @@
     try { storage.removeItem(key); } catch (e) {}
   }
 
-  function loadAuth() {
-    return readJSON(sessionStorage, AUTH_KEY) || readJSON(localStorage, AUTH_KEY);
-  }
-  function saveAuth(auth, remember) {
-    removeKey(localStorage, AUTH_KEY);
-    removeKey(sessionStorage, AUTH_KEY);
-    writeJSON(remember ? localStorage : sessionStorage, AUTH_KEY, auth);
-  }
-  function clearAuth() {
-    removeKey(localStorage, AUTH_KEY);
-    removeKey(sessionStorage, AUTH_KEY);
-  }
-
   let draftTimer;
   function saveDraftSoon() {
     clearTimeout(draftTimer);
@@ -257,7 +268,7 @@
   }
   function saveDraft() {
     clearTimeout(draftTimer);
-    writeJSON(localStorage, DRAFT_KEY, { data, baseSha, savedAt: new Date().toISOString() });
+    if (data) writeJSON(localStorage, DRAFT_KEY, { data, baseSha, savedAt: new Date().toISOString() });
   }
   function clearDraft() {
     clearTimeout(draftTimer);
@@ -294,11 +305,10 @@
     refreshStatus();
   }
 
-  function setConnStatus(state, text) {
+  function setStatus(state, text) {
     const c = $('conn-status');
     c.dataset.state = state;
     c.querySelector('.conn-text').textContent = text;
-    $('menu-disconnect').hidden = !store;
   }
 
   // ---------- Field rendering ----------
@@ -344,7 +354,6 @@
     const upload = h('button', {
       type: 'button', class: 'btn btn-sm',
       onclick: () => {
-        if (!store) { toast('Connect GitHub first to upload images.'); openConnect(); return; }
         const picker = $('photo-file');
         picker.onchange = async () => {
           const file = picker.files[0];
@@ -384,12 +393,18 @@
     const canvas = h('canvas', { width: Math.round(bitmap.width * scale), height: Math.round(bitmap.height * scale) });
     canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     const blob = await new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.86));
-    const bytes = new Uint8Array(await blob.arrayBuffer());
-    const base = file.name.replace(/\.[^.]+$/, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'photo';
-    const path = `images/${base}-${Date.now().toString(36)}.jpg`;
-    await store.putFile(path, window.b64.bytesToBase64(bytes), `Upload image ${path}`);
+    const { path } = await api('/api/upload', { method: 'POST', body: { filename: file.name, content: await blobToBase64(blob) } });
     localImages[path] = URL.createObjectURL(blob);
     return path;
+  }
+
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(',')[1]);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
   }
 
   // ---------- Blocks ----------
@@ -507,17 +522,11 @@
 
   function renderEditor() {
     const s = SECTIONS.find((x) => x.id === section) || SECTIONS[0];
-    const notices = [];
-    if (!store) {
-      notices.push(h('div', { class: 'notice' },
-        h('b', null, 'Offline mode. '),
-        'You can edit and preview, and your draft is kept in this browser. ',
-        h('a', { href: '#', onclick: (e) => { e.preventDefault(); openConnect(); } }, 'Connect GitHub'),
-        ' to publish changes to the live site.'));
-    }
     $('editor').replaceChildren(
       h('header', { class: 'section-header' }, h('h1', null, s.title), h('p', null, s.desc)),
-      ...notices,
+      ...(contentMissing ? [h('div', { class: 'notice warn' },
+        h('b', null, 'No content file yet. '),
+        'The repository has no data/portfolio.json on this branch. Fill in the sections and Publish to create it, or use More → Import.')] : []),
       ...s.blocks.map((b) => {
         if (b.kind === 'fields') return fieldsBlock(b);
         if (b.kind === 'strings') return stringsBlock(b);
@@ -545,152 +554,100 @@
     };
   }
 
-  async function loadFromSite() {
-    try {
-      const res = await fetch(DATA_PATH, { cache: 'no-cache' });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return await res.json();
-    } catch (e) {
-      return null;
-    }
-  }
-
-  async function loadRemote() {
-    const file = await store.getFile(DATA_PATH);
-    if (!file) return null;
-    try {
-      return { data: JSON.parse(file.text), sha: file.sha };
-    } catch (e) {
-      throw new Error(`${DATA_PATH} on GitHub is not valid JSON.`);
-    }
-  }
-
-  async function connect(auth) {
-    const s = new window.GitHubStore(auth);
-    setConnStatus('busy', 'Connecting…');
-    await s.connect();
-    store = s;
-    setConnStatus('on', `${s.owner}/${s.repo} · ${s.branch}`);
-
-    const remote = await loadRemote();
-    const keepEdits = data && isDirty();
-    if (remote) {
-      published = canonical(remote.data);
-      baseSha = remote.sha;
-      if (!keepEdits) data = remote.data;
-    } else {
-      baseSha = null;
-      if (!data) data = emptyData();
-      published = '';
-    }
-    return s;
-  }
-
   function restoreDraft() {
     const draft = readJSON(localStorage, DRAFT_KEY);
     if (!draft || !draft.data || canonical(draft.data) === published) return;
     const when = draft.savedAt ? new Date(draft.savedAt).toLocaleString() : 'earlier';
     if (confirm(`You have unsaved changes from ${when}. Restore them?`)) {
       data = draft.data;
-      if (store && draft.baseSha && draft.baseSha !== baseSha) {
-        toast('Note: the published data changed on GitHub since this draft was made. Review before publishing.', { ms: 8000 });
+      if (draft.baseSha && draft.baseSha !== baseSha) {
+        toast('Note: the published data changed since this draft was made. Review before publishing.', { ms: 8000 });
       }
     } else {
       clearDraft();
     }
   }
 
-  async function init() {
-    section = readJSON(sessionStorage, SECTION_KEY) || section;
-    setConnStatus('off', 'Not connected — click to connect');
-
-    const auth = loadAuth();
-    if (auth && auth.token) {
-      try {
-        await connect(auth);
-      } catch (err) {
-        store = null;
-        setConnStatus('error', 'Connection failed — click to reconnect');
-        toast(err.message, { error: true });
-      }
-    }
-    if (!data) {
-      const site = await loadFromSite();
-      data = site || emptyData();
-      published = site ? canonical(site) : '';
-    }
+  async function loadContent() {
+    setStatus('busy', 'Loading…');
+    const res = await api('/api/content');
+    contentMissing = !res.data;
+    data = res.data || emptyData();
+    published = canonical(data);
+    baseSha = res.sha;
     restoreDraft();
+    setStatus('on', 'Signed in · publishing to GitHub');
+    $('app').hidden = false;
     renderAll();
   }
 
-  // ---------- Connect dialog ----------
-  function guessRepo() {
-    const host = location.hostname;
-    if (host.endsWith('.github.io')) return { owner: host.split('.')[0], repo: host };
-    return DEFAULT_REPO;
+  // ---------- Login ----------
+  function showLogin(message) {
+    const dlg = $('login-dialog');
+    $('login-error').textContent = message || '';
+    $('login-error').hidden = !message;
+    setStatus('off', 'Signed out');
+    if (!dlg.open) dlg.showModal();
+    $('login-form').password.focus();
   }
 
-  function openConnect() {
-    const form = $('connect-form');
-    const auth = loadAuth() || {};
-    const guess = guessRepo();
-    form.owner.value = auth.owner || guess.owner;
-    form.repo.value = auth.repo || guess.repo;
-    form.branch.value = auth.branch || '';
-    form.token.value = '';
-    form.remember.checked = !!readJSON(localStorage, AUTH_KEY);
-    $('repo-hint').textContent = `${form.owner.value}/${form.repo.value}`;
-    $('connect-error').hidden = true;
-    $('connect-dialog').showModal();
-    form.token.focus();
-  }
-
-  $('connect-form').addEventListener('submit', async (e) => {
+  $('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.target;
-    const auth = {
-      owner: form.owner.value.trim(),
-      repo: form.repo.value.trim(),
-      branch: form.branch.value.trim(),
-      token: form.token.value.trim(),
-    };
-    const btn = $('connect-submit');
+    const btn = $('login-submit');
     btn.disabled = true;
-    btn.textContent = 'Connecting…';
-    $('connect-error').hidden = true;
+    btn.textContent = 'Signing in…';
+    $('login-error').hidden = true;
     try {
-      await connect(auth);
-      saveAuth(auth, form.remember.checked);
-      $('connect-dialog').close();
-      renderAll();
-      toast(`Connected to ${auth.owner}/${auth.repo}.`);
+      await api('/api/auth', { method: 'POST', body: { password: form.password.value } });
     } catch (err) {
-      store = null;
-      setConnStatus('error', 'Connection failed — click to reconnect');
-      $('connect-error').textContent = err.message;
-      $('connect-error').hidden = false;
+      $('login-error').textContent = err.message;
+      $('login-error').hidden = false;
+      return;
     } finally {
       btn.disabled = false;
-      btn.textContent = 'Connect';
+      btn.textContent = 'Sign in';
+    }
+    form.password.value = '';
+    $('login-dialog').close();
+    try {
+      if (data && isDirty()) {
+        // Session expired mid-edit: keep the edits, just refresh the published baseline.
+        const res = await api('/api/content');
+        contentMissing = !res.data;
+        published = canonical(res.data || emptyData());
+        baseSha = res.sha;
+        setStatus('on', 'Signed in · publishing to GitHub');
+        refreshStatus();
+      } else {
+        await loadContent();
+      }
+    } catch (err) {
+      showFatal(err);
     }
   });
-  $('connect-cancel').addEventListener('click', () => $('connect-dialog').close());
-  $('conn-status').addEventListener('click', openConnect);
-  ['owner', 'repo'].forEach((n) => $('connect-form')[n].addEventListener('input', () => {
-    const f = $('connect-form');
-    $('repo-hint').textContent = `${f.owner.value}/${f.repo.value}`;
-  }));
+  // Escape must not dismiss the login screen.
+  $('login-dialog').addEventListener('cancel', (e) => e.preventDefault());
+
+  async function init() {
+    section = readJSON(sessionStorage, SECTION_KEY) || section;
+    const { authenticated } = await api('/api/auth');
+    if (authenticated) await loadContent();
+    else showLogin();
+  }
 
   // ---------- Publish ----------
   function openPublish() {
     if (!isDirty()) { toast('Nothing to publish.'); return; }
-    if (!store) { toast('Connect GitHub to publish.'); openConnect(); return; }
     const sections = changedSections();
-    $('publish-target').textContent = `Commits ${DATA_PATH} to ${store.owner}/${store.repo} (${store.branch}). The live site updates about a minute later.`;
     $('publish-changes').replaceChildren(...sections.map((s) => h('li', null, s)));
     $('publish-form').message.value = `Update portfolio: ${sections.join(', ').toLowerCase()}`;
     $('publish-error').hidden = true;
     $('publish-dialog').showModal();
+  }
+
+  async function publish(message, force) {
+    return api('/api/content', { method: 'PUT', body: { data, baseSha, message, force } });
   }
 
   $('publish-form').addEventListener('submit', async (e) => {
@@ -701,23 +658,25 @@
     btn.textContent = 'Publishing…';
     $('publish-error').hidden = true;
     try {
-      const latest = await store.getSha(DATA_PATH);
-      if (latest && baseSha && latest !== baseSha &&
-          !confirm('The portfolio data was changed on GitHub after you started editing. Overwrite it with your version?')) {
-        throw new Error('Publishing cancelled. Reload the page to get the latest version.');
+      let res;
+      try {
+        res = await publish(message, false);
+      } catch (err) {
+        if (!(err.status === 409 && err.body && err.body.conflict)) throw err;
+        if (!confirm('The portfolio data was changed after you started editing. Overwrite it with your version?')) {
+          throw new Error('Publishing cancelled. Reload the page to get the latest version.');
+        }
+        res = await publish(message, true);
       }
-      const next = clone(data);
-      next.meta = { ...(next.meta || {}), updated: today() };
-      const text = canonical(next);
-      const res = await store.putText(DATA_PATH, text, message, latest || undefined);
-      data = next;
-      published = text;
+      data = res.data;
+      published = canonical(res.data);
       baseSha = res.sha;
+      contentMissing = false;
       clearDraft();
       $('publish-dialog').close();
       renderEditor();
-      toast('Published! The site updates in about a minute.', {
-        link: res.commit && res.commit.html_url ? { href: res.commit.html_url, text: 'View commit' } : null,
+      toast('Published! The site redeploys in about a minute.', {
+        link: res.commitUrl ? { href: res.commitUrl, text: 'View commit' } : null,
         ms: 8000,
       });
     } catch (err) {
@@ -746,7 +705,7 @@
     moreBtn.setAttribute('aria-expanded', String(!menu.hidden));
   });
   document.addEventListener('click', closeMenu);
-  menu.addEventListener('click', (e) => {
+  menu.addEventListener('click', async (e) => {
     const action = e.target.dataset.action;
     if (!action) return;
     closeMenu();
@@ -763,12 +722,11 @@
       clearDraft();
       renderAll();
       toast('Changes discarded.');
-    } else if (action === 'disconnect') {
-      clearAuth();
-      store = null;
-      setConnStatus('off', 'Not connected — click to connect');
-      renderEditor();
-      toast('Disconnected. Your token was removed from this browser.');
+    } else if (action === 'logout') {
+      if (isDirty()) saveDraft();
+      try { await api('/api/auth', { method: 'DELETE' }); } catch (err) { /* cookie may already be gone */ }
+      $('app').hidden = true;
+      showLogin();
     }
   });
 
@@ -791,7 +749,7 @@
   document.addEventListener('keydown', (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
       e.preventDefault();
-      openPublish();
+      if (!$('app').hidden) openPublish();
     }
   });
 
@@ -799,8 +757,12 @@
     if (isDirty()) { saveDraft(); e.preventDefault(); e.returnValue = ''; }
   });
 
-  init().catch((err) => {
+  function showFatal(err) {
     console.error(err);
+    setStatus('error', 'Server unavailable');
+    $('app').hidden = false;
     $('editor').replaceChildren(h('div', { class: 'empty' }, 'Could not start the admin panel: ' + err.message));
-  });
+  }
+
+  init().catch(showFatal);
 })();

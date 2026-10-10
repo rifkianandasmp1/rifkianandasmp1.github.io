@@ -1,77 +1,95 @@
 # M. Rifki Ananda — Portfolio
 
-Personal portfolio hosted on GitHub Pages, with an admin panel that publishes
-content changes straight to this repository.
-
-Live site: https://rifkianandasmp1.github.io
+Personal portfolio hosted on **Vercel**, with a password-protected admin panel backed by
+a private **Go** API. The repository can stay private.
 
 ## File structure
 
 ```
-├── index.html            ← Public portfolio
-├── admin.html            ← Content editor (needs a GitHub token to publish)
-├── data/
-│   └── portfolio.json    ← All content lives here (the "database")
-├── assets/
-│   ├── css/site.css      ← Portfolio styles (light + dark theme)
-│   ├── css/admin.css     ← Admin styles
-│   ├── js/site.js        ← Renders portfolio.json into the page
-│   ├── js/admin.js       ← Schema-driven editor
-│   └── js/github.js      ← GitHub Contents API client (the backend)
-├── images/               ← Photos
-├── favicon.svg, robots.txt, sitemap.xml, .nojekyll
+├── public/                  ← Everything served to visitors
+│   ├── index.html           ← Portfolio
+│   ├── admin.html           ← Admin panel (served at /admin)
+│   ├── data/portfolio.json  ← All content (the "database")
+│   ├── images/              ← Photos
+│   └── assets/              ← CSS and JS for the site and the admin
+├── backend/                 ← Go API: auth, content, upload, GitHub client (+ tests)
+├── api/*/index.go           ← Vercel Function entrypoints, one per route
+├── cmd/dev/                 ← Local dev server (go run ./cmd/dev)
+├── docs/
+│   ├── api-contract.md      ← API contract (read this first)
+│   └── openapi.yaml         ← Same contract as OpenAPI 3.1
+├── go.mod
+└── vercel.json              ← Output dir, rewrites, security headers
 ```
 
-## How the backend works
+Only `public/` is served as static files, so the Go source is never downloadable.
 
-GitHub Pages only serves static files, so the repository itself is the backend:
+## How it works
 
-1. `index.html` loads `data/portfolio.json` and renders every section from it.
-2. `admin.html` edits that JSON in the browser and, when you click **Publish**,
-   commits it to this repository through the GitHub REST API.
-3. GitHub Pages redeploys automatically — the live site updates in about a minute.
+1. Visitors get static files: `index.html` renders `data/portfolio.json`.
+2. `/admin` asks for a password. The Go API checks it against `ADMIN_PASSWORD` and
+   sets an HttpOnly, signed session cookie (valid 7 days).
+3. **Publish** sends the content to `PUT /api/content`, which commits
+   `public/data/portfolio.json` to GitHub using a token stored only in Vercel.
+4. The commit triggers a new Vercel deployment; the site updates in about a minute.
 
-No server, database or hosting bill is needed. Every edit is a commit, so the
-full history is in Git and any change can be reverted.
+Every change is a Git commit (easy to revert), and no database is needed.
+Endpoints, payloads and error codes are specified in [`docs/api-contract.md`](docs/api-contract.md).
+
+## Setting up Vercel (one time)
+
+### 1. Create a GitHub token for the server
+GitHub → Settings → Developer settings → **Fine-grained tokens** → Generate new token:
+- **Repository access:** Only select repositories → this repository
+- **Permissions → Repository → Contents:** Read and write
+- Pick a long expiry and note the date. Publishing stops working when it expires.
+
+### 2. Import the project
+1. Sign in at https://vercel.com with your GitHub account.
+2. **Add New → Project** → import this repository.
+3. Framework preset: **Other**. Leave the build command empty; the output directory
+   (`public`) comes from `vercel.json`.
+
+### 3. Environment variables (Project → Settings → Environment Variables)
+
+| Name | Value |
+|---|---|
+| `ADMIN_PASSWORD` | Your admin password (at least 8 characters; use a long one) |
+| `SESSION_SECRET` | A random string of 32+ characters, e.g. from `openssl rand -base64 48` |
+| `GITHUB_TOKEN` | The token from step 1 |
+
+That is all that is required. The repository and branch come from the deployment's
+own Git metadata, so production publishes to `main` and each preview publishes to its
+own branch. Only set `GITHUB_OWNER`, `GITHUB_REPO` or `GITHUB_BRANCH` to override that.
+
+Redeploy after adding or changing variables. Changing `SESSION_SECRET` signs everyone out.
+
+### 4. Domain
+The site is live at https://rifkiananda.vercel.app. To use your own domain:
+Project → Settings → **Domains** → add it and follow the DNS instructions.
+Then update the `og:image`, `og:url` and canonical URLs in `public/index.html` so link previews work.
+
+### 5. Make the repository private (optional)
+GitHub → repository **Settings → General → Danger Zone → Change visibility**.
+Vercel keeps deploying private repositories. On a free GitHub plan this also switches
+off the old GitHub Pages site.
 
 ## Editing content
 
-1. Open `https://rifkianandasmp1.github.io/admin.html`.
-2. Click **Not connected** (top left) and paste a GitHub token — see below.
-3. Edit any section. Drafts are saved in your browser automatically.
-4. **Preview** opens the site with your unpublished draft.
-5. **Publish** (or Ctrl/Cmd + S) commits the changes.
+Open `/admin`, sign in, edit, then **Publish** (or Ctrl/Cmd + S). Drafts are saved in the
+browser, **Preview** shows the unpublished draft, and photo uploads are resized to 1200px.
 
-Uploading a new profile photo from the admin resizes it to 1200px and commits it
-to `images/`.
+Text fields support a tiny markup: `*text*` for the accent italic and `**text**` for bold.
 
-Text fields that mention it support a tiny markup: `*text*` for the accent italic
-and `**text**` for bold.
+## Local development
 
-### Creating the GitHub token (one time)
-
-1. Go to **GitHub → Settings → Developer settings → Fine-grained tokens →
-   Generate new token** (https://github.com/settings/personal-access-tokens/new).
-2. **Repository access:** *Only select repositories* → `rifkianandasmp1.github.io`.
-3. **Permissions → Repository permissions → Contents:** *Read and write*.
-4. Pick an expiry, generate, and paste the token into the admin panel.
-
-The token is stored only in your browser (for the current tab, or on the device if
-you tick *Remember*). Use **More → Disconnect GitHub** to remove it. Anyone can open
-`admin.html`, but nobody can publish without a token that has write access to this
-repository.
-
-## Local preview
-
-The page loads its data with `fetch`, so open it through a local web server
-instead of double-clicking the file:
+Requires Go 1.24+.
 
 ```bash
-python3 -m http.server 8000
-# then visit http://localhost:8000 and http://localhost:8000/admin.html
+# .env.local (git-ignored) holds the same variables as Vercel
+go run ./cmd/dev          # http://localhost:3000 and http://localhost:3000/admin
+go test ./...             # API tests, no network needed
 ```
 
-## Deploying
-
-GitHub Pages serves the default branch (`main`). Merge changes into `main` and
-the site redeploys automatically.
+Publishing from the local admin commits to the real repository. `vercel dev` also works
+if you prefer the Vercel CLI.

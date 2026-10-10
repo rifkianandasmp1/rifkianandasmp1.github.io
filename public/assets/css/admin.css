@@ -74,8 +74,7 @@ code { font-family: var(--mono); font-size: 0.92em; background: var(--surface-2)
   background: var(--ink); color: var(--bg); text-decoration: none; font: 600 14px var(--font);
 }
 .topbar-title { font-weight: 600; font-size: 15px; }
-.conn { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 0; color: var(--ink-3); font: 12px var(--font); cursor: pointer; }
-.conn:hover .conn-text { text-decoration: underline; }
+.conn { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-3); font-size: 12px; }
 .conn .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); }
 .conn[data-state="on"] .dot { background: var(--ok); }
 .conn[data-state="busy"] .dot { background: var(--warn); }
@@ -199,3 +198,13 @@ input:focus, textarea:focus { outline: none; border-color: var(--accent); box-sh
 }
 .toast a { color: inherit; }
 .toast.error { background: var(--danger); color: #fff; }
+
+/* Login */
+.dialog-login { width: min(380px, calc(100vw - 32px)); }
+.dialog-login form { gap: 16px; }
+.dialog-login .btn { height: 42px; }
+.dialog-login::backdrop { background: var(--bg); backdrop-filter: none; }
+.login-mark {
+  display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px;
+  background: var(--ink); color: var(--bg); font-weight: 600;
+}
