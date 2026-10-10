@@ -19,6 +19,7 @@ type GitHub struct {
 	Repo   string
 	Branch string
 
+	Origin  string       // where Owner/Repo/Branch came from, for error messages
 	BaseURL string       // defaults to https://api.github.com (overridden in tests)
 	Client  *http.Client // defaults to a client with a 15s timeout
 }
@@ -161,6 +162,12 @@ func (g *GitHub) GetFile(ctx context.Context, path string) (*File, error) {
 // returns nil when both exist (the file itself is just missing).
 func (g *GitHub) CheckTarget(ctx context.Context) error {
 	repo := g.Owner + "/" + g.Repo
+	errorf := func(status int, message string) error {
+		if g.Origin != "" {
+			message += " [" + g.Origin + "]"
+		}
+		return &APIError{Status: status, Message: message}
+	}
 	err := g.do(ctx, http.MethodGet, g.repoPath(), nil, nil)
 	if ge, ok := err.(*ghError); ok && ge.status == http.StatusNotFound {
 		return errorf(http.StatusInternalServerError, fmt.Sprintf(

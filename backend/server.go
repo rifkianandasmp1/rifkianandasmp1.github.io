@@ -48,7 +48,7 @@ type Server struct {
 // so production publishes to its branch and each preview to the preview's
 // branch. GITHUB_OWNER, GITHUB_REPO and GITHUB_BRANCH override them.
 func FromEnv() (*Server, error) {
-	var missing []string
+	var missing, origins []string
 	env := func(names ...string) string {
 		for _, n := range names {
 			if v := strings.TrimSpace(os.Getenv(n)); v != "" {
@@ -57,8 +57,19 @@ func FromEnv() (*Server, error) {
 		}
 		return ""
 	}
+	// lookup is env() that also records which variable supplied the value,
+	// so configuration errors can say where a wrong value came from.
+	lookup := func(label string, names ...string) string {
+		for _, n := range names {
+			if v := strings.TrimSpace(os.Getenv(n)); v != "" {
+				origins = append(origins, fmt.Sprintf("%s from %s", label, n))
+				return v
+			}
+		}
+		return ""
+	}
 	require := func(name string, fallbacks ...string) string {
-		v := env(append([]string{name}, fallbacks...)...)
+		v := lookup(strings.ToLower(strings.TrimPrefix(name, "GITHUB_")), append([]string{name}, fallbacks...)...)
 		if v == "" {
 			missing = append(missing, name)
 		}
@@ -68,15 +79,18 @@ func FromEnv() (*Server, error) {
 		AdminPassword: os.Getenv("ADMIN_PASSWORD"),
 		SessionSecret: []byte(os.Getenv("SESSION_SECRET")),
 		GitHub: &GitHub{
-			Token:  require("GITHUB_TOKEN"),
+			Token:  env("GITHUB_TOKEN"),
 			Owner:  require("GITHUB_OWNER", "VERCEL_GIT_REPO_OWNER"),
 			Repo:   require("GITHUB_REPO", "VERCEL_GIT_REPO_SLUG"),
-			Branch: env("GITHUB_BRANCH", "VERCEL_GIT_COMMIT_REF"),
+			Branch: lookup("branch", "GITHUB_BRANCH", "VERCEL_GIT_COMMIT_REF"),
 			// Optional, for GitHub Enterprise or a local fake API.
 			BaseURL: env("GITHUB_API_URL"),
 		},
 		Now:          time.Now,
 		LoginFailure: 800 * time.Millisecond,
+	}
+	if s.GitHub.Token == "" {
+		missing = append(missing, "GITHUB_TOKEN")
 	}
 	if len(s.AdminPassword) < 8 {
 		missing = append(missing, "ADMIN_PASSWORD (min 8 characters)")
@@ -89,6 +103,10 @@ func FromEnv() (*Server, error) {
 	}
 	if s.GitHub.Branch == "" {
 		s.GitHub.Branch = "main"
+	}
+	s.GitHub.Origin = strings.Join(origins, ", ")
+	if d := env("VERCEL_URL"); d != "" {
+		s.GitHub.Origin += "; deployment " + d
 	}
 	return s, nil
 }

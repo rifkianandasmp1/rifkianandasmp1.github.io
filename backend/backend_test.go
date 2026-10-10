@@ -371,6 +371,9 @@ func TestFromEnvUsesVercelGitMetadata(t *testing.T) {
 	if g := s.GitHub; g.Owner != "rifki" || g.Repo != "site" || g.Branch != "feature-x" {
 		t.Errorf("got %s/%s@%s", g.Owner, g.Repo, g.Branch)
 	}
+	if want := "owner from VERCEL_GIT_REPO_OWNER, repo from VERCEL_GIT_REPO_SLUG, branch from VERCEL_GIT_COMMIT_REF"; !strings.HasPrefix(s.GitHub.Origin, want) {
+		t.Errorf("origin = %q, want prefix %q", s.GitHub.Origin, want)
+	}
 
 	t.Setenv("GITHUB_BRANCH", "main")
 	if s, _ := FromEnv(); s.GitHub.Branch != "main" {
