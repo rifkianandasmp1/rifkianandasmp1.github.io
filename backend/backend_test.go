@@ -314,7 +314,7 @@ func TestSEO(t *testing.T) {
 }
 
 func TestFromEnvReportsMissingConfig(t *testing.T) {
-	for _, k := range []string{"ADMIN_PASSWORD", "SESSION_SECRET", "GITHUB_TOKEN", "GITHUB_OWNER", "GITHUB_REPO"} {
+	for _, k := range []string{"ADMIN_PASSWORD", "SESSION_SECRET", "GITHUB_TOKEN", "GITHUB_OWNER", "GITHUB_REPO", "VERCEL_GIT_REPO_OWNER", "VERCEL_GIT_REPO_SLUG"} {
 		t.Setenv(k, "")
 	}
 	t.Setenv("ADMIN_PASSWORD", "short")
@@ -351,5 +351,29 @@ func TestMissingContentExplainsMisconfiguration(t *testing.T) {
 	delete(gh.files, DataPath)
 	if code, body := get(); code != 200 || body["data"] != nil {
 		t.Errorf("missing file on a valid branch: %d %v", code, body)
+	}
+}
+
+func TestFromEnvUsesVercelGitMetadata(t *testing.T) {
+	t.Setenv("ADMIN_PASSWORD", "correct horse battery")
+	t.Setenv("SESSION_SECRET", strings.Repeat("x", 40))
+	t.Setenv("GITHUB_TOKEN", "t")
+	for _, k := range []string{"GITHUB_OWNER", "GITHUB_REPO", "GITHUB_BRANCH"} {
+		t.Setenv(k, "")
+	}
+	t.Setenv("VERCEL_GIT_REPO_OWNER", "rifki")
+	t.Setenv("VERCEL_GIT_REPO_SLUG", "site")
+	t.Setenv("VERCEL_GIT_COMMIT_REF", "feature-x")
+	s, err := FromEnv()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if g := s.GitHub; g.Owner != "rifki" || g.Repo != "site" || g.Branch != "feature-x" {
+		t.Errorf("got %s/%s@%s", g.Owner, g.Repo, g.Branch)
+	}
+
+	t.Setenv("GITHUB_BRANCH", "main")
+	if s, _ := FromEnv(); s.GitHub.Branch != "main" {
+		t.Errorf("GITHUB_BRANCH should override, got %s", s.GitHub.Branch)
 	}
 }

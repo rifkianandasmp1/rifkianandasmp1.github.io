@@ -42,10 +42,23 @@ type Server struct {
 }
 
 // FromEnv builds a Server from environment variables.
+//
+// On Vercel the repository and branch default to the deployment's own Git
+// metadata (VERCEL_GIT_REPO_OWNER, VERCEL_GIT_REPO_SLUG, VERCEL_GIT_COMMIT_REF),
+// so production publishes to its branch and each preview to the preview's
+// branch. GITHUB_OWNER, GITHUB_REPO and GITHUB_BRANCH override them.
 func FromEnv() (*Server, error) {
 	var missing []string
-	get := func(name string) string {
-		v := strings.TrimSpace(os.Getenv(name))
+	env := func(names ...string) string {
+		for _, n := range names {
+			if v := strings.TrimSpace(os.Getenv(n)); v != "" {
+				return v
+			}
+		}
+		return ""
+	}
+	require := func(name string, fallbacks ...string) string {
+		v := env(append([]string{name}, fallbacks...)...)
 		if v == "" {
 			missing = append(missing, name)
 		}
@@ -55,12 +68,12 @@ func FromEnv() (*Server, error) {
 		AdminPassword: os.Getenv("ADMIN_PASSWORD"),
 		SessionSecret: []byte(os.Getenv("SESSION_SECRET")),
 		GitHub: &GitHub{
-			Token:  get("GITHUB_TOKEN"),
-			Owner:  get("GITHUB_OWNER"),
-			Repo:   get("GITHUB_REPO"),
-			Branch: strings.TrimSpace(os.Getenv("GITHUB_BRANCH")),
+			Token:  require("GITHUB_TOKEN"),
+			Owner:  require("GITHUB_OWNER", "VERCEL_GIT_REPO_OWNER"),
+			Repo:   require("GITHUB_REPO", "VERCEL_GIT_REPO_SLUG"),
+			Branch: env("GITHUB_BRANCH", "VERCEL_GIT_COMMIT_REF"),
 			// Optional, for GitHub Enterprise or a local fake API.
-			BaseURL: strings.TrimSpace(os.Getenv("GITHUB_API_URL")),
+			BaseURL: env("GITHUB_API_URL"),
 		},
 		Now:          time.Now,
 		LoginFailure: 800 * time.Millisecond,

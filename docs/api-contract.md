@@ -21,9 +21,10 @@ static file `/data/portfolio.json`.
 
 ### Storage and deployment
 - Content lives in the GitHub repository as `public/data/portfolio.json`; images in `public/images/`.
-- `PUT /api/content` and `POST /api/upload` each create one commit on `GITHUB_BRANCH`
-  (default `main`). The commit triggers a Vercel deployment, so changes are public
-  **about one minute** after a successful response.
+- `PUT /api/content` and `POST /api/upload` each create one commit on the configured
+  branch (by default the branch of the running deployment, see [Configuration](#5-configuration)).
+  The commit triggers a Vercel deployment, so changes are public **about one minute**
+  after a successful response.
 - The GitHub token exists only in the server environment.
 
 ## 2. Conventions
@@ -234,9 +235,9 @@ when the site renders it.
 | `ADMIN_PASSWORD` | yes | Admin password, at least 8 characters |
 | `SESSION_SECRET` | yes | At least 32 random characters, used to sign cookies |
 | `GITHUB_TOKEN` | yes | Fine-grained token with **Contents: Read and write** on the repository |
-| `GITHUB_OWNER` | yes | Repository owner |
-| `GITHUB_REPO` | yes | Repository name |
-| `GITHUB_BRANCH` | no | Branch to commit to (default `main`) |
+| `GITHUB_OWNER` | no | Repository owner. Default: `VERCEL_GIT_REPO_OWNER` |
+| `GITHUB_REPO` | no | Repository name. Default: `VERCEL_GIT_REPO_SLUG` |
+| `GITHUB_BRANCH` | no | Branch to commit to. Default: `VERCEL_GIT_COMMIT_REF` (the deployment's branch), else `main` |
 | `GITHUB_API_URL` | no | API base URL, for GitHub Enterprise or a local fake |
 
 If any required variable is missing, every admin endpoint returns

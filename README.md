@@ -57,9 +57,10 @@ GitHub → Settings → Developer settings → **Fine-grained tokens** → Gener
 | `ADMIN_PASSWORD` | Your admin password (at least 8 characters; use a long one) |
 | `SESSION_SECRET` | A random string of 32+ characters, e.g. from `openssl rand -base64 48` |
 | `GITHUB_TOKEN` | The token from step 1 |
-| `GITHUB_OWNER` | `rifkianandasmp1` |
-| `GITHUB_REPO` | The repository name |
-| `GITHUB_BRANCH` | `main` (optional, this is the default) |
+
+That is all that is required. The repository and branch come from the deployment's
+own Git metadata, so production publishes to `main` and each preview publishes to its
+own branch. Only set `GITHUB_OWNER`, `GITHUB_REPO` or `GITHUB_BRANCH` to override that.
 
 Redeploy after adding or changing variables. Changing `SESSION_SECRET` signs everyone out.
 
