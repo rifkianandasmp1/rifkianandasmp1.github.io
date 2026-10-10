@@ -460,6 +460,7 @@ components:
           items:
             type: object
             properties:
+              active: { type: boolean, default: true, description: 'false hides the item on the site and excludes it from the hero stats.' }
               category: { type: string }
               items: { type: array, items: { type: string } }
         training:
@@ -467,6 +468,7 @@ components:
           items:
             type: object
             properties:
+              active: { type: boolean, default: true, description: 'false hides the item on the site and excludes it from the hero stats.' }
               year: { type: string }
               title: { type: string }
               certificate: { type: boolean, description: 'Shows a "Certified" badge.' }
@@ -497,21 +499,20 @@ components:
         tagline: { $ref: '#/components/schemas/RichText' }
         photo: { type: string, description: 'Site-relative path, e.g. `images/profile.png`.' }
         stats:
-          type: array
-          items:
-            type: object
-            properties:
-              label: { type: string }
-              value: { type: string }
-              suffix: { type: string }
+          deprecated: true
+          description: Ignored. The hero stats are computed by the site (see the API contract, section 4).
 
     Experience:
       type: object
       properties:
+        active: { type: boolean, default: true, description: 'false hides the item on the site and excludes it from the hero stats.' }
         start: { type: string, example: Apr 2026 }
         end: { type: string, example: Present, description: '"Present" marks the current role.' }
         role: { type: string }
         company: { type: string }
+        company_short:
+          type: string
+          description: Short company name for the "Currently at" stat. Default derived from `company` (text before " · ", without "PT", "(Persero)", "Tbk").
         location: { type: string }
         desc: { $ref: '#/components/schemas/RichText' }
         tags: { type: array, items: { type: string } }
@@ -519,6 +520,7 @@ components:
     Project:
       type: object
       properties:
+        active: { type: boolean, default: true, description: 'false hides the item on the site and excludes it from the hero stats.' }
         year: { type: string, example: 2025–26 }
         title: { type: string }
         org: { type: string, description: Used for the filter buttons. }
@@ -527,6 +529,7 @@ components:
     Education:
       type: object
       properties:
+        active: { type: boolean, default: true, description: 'false hides the item on the site and excludes it from the hero stats.' }
         start: { type: string }
         end: { type: string }
         degree: { $ref: '#/components/schemas/RichText' }
